@@ -1,0 +1,1128 @@
+PGC++
+
+
+       pgCC - Portland Group ANSI and cfront-compatible C++ compiler
+
+
+
+SYNOPSIS
+
+
+       pgCC [ -# ] [ -### ] [ -A ] [ --[no_]alternative_tokens ] 
+       [ -B ] [ --[no_]bool ] [ --[no]builtin ] [ -C ] [ -c ] 
+       [ --cfront_2.1 ] [ --cfront_3.0 ] [ --create_pch ] 
+       [ -Dname[=def] ] [ --diag_error ] [ --diag_remark ] 
+       [ --diag_suppress ] [ --diag_warning ] 
+       [ --display_error_number ] [ --dollar ] [ -dryrun ] [ -E ] 
+       [ -e ] [ --[no_]exceptions ] [ -fast ] [ -flags ] [ -fpic ] 
+       [ -G ] [ -g ] [ --gnu_extensions ] [ -help ] [ -Idirectory ] 
+       [ -i ] [ --instantiation_dir ] [ -Kflag ] [ -Ldirectory ] 
+       [ --[no]llalign ] [ -l library ] [ -M ] [ -MD ] [ -Mpgflag ] 
+       [ -m ] [ -mp ] [ -Olevel ] [ -o file ] 
+       [ --one_instantiation_per_object ] [ -P ] [ -p ] [ +p ] 
+       [ -pc arg] [ --pch ] [ --pch_dir directory ] 
+       [ --preinclude=filename ] [ --[no_]pch_messages ] 
+       [ --prelink_objects ] [ -Q[dir | path | produce | option ] ] 
+       [ -Rdirectory ] [ -r ] [ -rc file ] [ -S ] [ -s ] [ -shared ] 
+       [ -show ] [ -t arg ] [ -time ] [ -tp { p5 | p6 } ] [ -Uname ] 
+       [ -uname ] [ --use_pch ] [ --[no_]using_std ] [ -V ] [ -v ] 
+       [ -Wpass,option[,option...]  ] [ -w ] [ -Xlevel ] [ -Xm ]
+       [ -x ] [ -Ypass,directory ] [ -y ] sourcefile...
+
+
+
+DESCRIPTION
+
+
+       pgCC is the interface to the Portland Group  C++  compiler 
+       for IA-32  (Intel x86) processors.   It  invokes  the  C++
+       compiler, assembler, and linker with options derived  from  
+       its  command-line arguments.
+
+       pgCC  bases its processing on the suffixes of the files it
+       is passed.  Files whose names end with .cpp, .cc, .c or .C  
+       are  considered to be C++ source files.   They are prepro-
+       cessed, compiled and assembled.  The resulting object file
+       is placed in the current directory.  Files whose names end 
+       with .s are  considered  IA-32  assembly  language  files.   
+       They are assembled and the resulting object file is placed
+       in the current directory.  Files whose names end  with  .o  
+       are taken as object files, and  are passed directly to the
+       linker if linking is requested.   Files  whose  names  end
+       with .a are taken as ar libraries.  No action is performed
+       on .a files unless  linking  is  requested.
+
+       Files not ending in .o, .s, .i, .c, .cpp,  .cc,  .C or  .a
+       are  taken  as object files and  passed  to the linker (if
+       linking is requested) with a warning message.
+
+       If a single C++ program is compiled and  linked  with  one 
+       pgCC command, then the intermediate  object  and  assembly 
+       files are deleted.
+
+
+
+A NOTE ON C++ OPTIMIZATION
+
+
+
+       pgCC provides a number of options to enable different opt-
+       imization  levels.   PGI recommends the following switches
+       as a starting point for setting the optimization level: 
+
+             -fast -Minline=levels:10.  
+
+       The best performance is achieved if exception handling  is 
+       also disabled via --no_exceptions. To avoid excessive code 
+       expansion due to inlining, move Standard Template  Library 
+       I/O out of inlined objects.  For additional  optimizations, 
+       refer to the -Msafeptr and -Mvect options.
+
+
+
+OPTIONS
+
+       When source files are compiled using any of the  -g,  -mp,
+       -Mconcur,  or -Mprof options, the same option(s) should be
+       used when using pgCC to link the objects.
+
+
+       -#        Display the invocations of the compiler,  assem-
+                 bler,  and  linker.   These  invocations are the
+                 and linker, but do not execute them.
+
+       -A        With this option, pgCC accepts  code  conforming
+                 to the ANSI standard for C++.
+
+       --alternative_tokens
+                 (Disable)   Enable  recognition  of  alternative 
+                 tokens. This controls recognition of the digraph 
+                 tokens in C and C++, and controls recognition of 
+                 the operator keywords (e.g., and) in C++.
+
+       -B        Allow  C++-style  comments in source code; these
+                 begin with  the characters '//' and continue  to
+                 the  end of the current line.  Such comments are
+                 stripped unless you specify the -C option.
+
+       --[no_]bool
+                 (Disable) Enable recognition of the bool type.
+
+       --[no]builtin
+                 (Don't) compile  with  math  subroutine  builtin 
+                 support, inling selected math library  routines.  
+                 --builtin is the default.
+
+       -C        Preserve  comments  in  preprocessed  C   source
+                 files.
+
+       -c        Skip the link step; compile and assemble only.
+
+       --cfront_2.1 
+                 Enable  compilation  of  C++   with   cfront 2.1 
+                 compatibility.    This  causes  pgCC  to  accept 
+                 language constructs that while  not part of  the 
+                 C++  language definition,  are  accepted  by the 
+                 AT&T C++ language system  (cfront  release 2.1).  
+                 Also enables acceptance of anachronisms.
+
+       --cfront_3.0 
+                 Enable  compilation  of  C++   with   cfront 3.0
+                 compatibility.    This  causes  pgCC  to  accept 
+                 language constructs that while  not part of  the 
+                 C++  language definition,  are  accepted  by the 
+                 AT&T C++ language system  (cfront  release 3.0).  
+                 Also enables acceptance of anachronisms.
+
+       --create_pch filename
+                 If other conditions are satisfied, create a pre-
+                 compiled header file with the specified name. If 
+                 --pch   (automatic  PCH  mode)  appears  on  the 
+                 command  line following this option,  its effect 
+                 is erased.
+
+       -Dname[=def]
+                 Define  name  to be def in the preprocessor.  If
+                 def is missing, it is assumed to be  empty.   If
+                 the  =  sign is missing, then name is defined to
+                 be the string 1.
+
+       --diag_error iag,iag,...
+                 Override  the  normal  error  severity  of   the 
+                 specified diagnostic messages.   The  message(s) 
+                 may be specified using amnemonic error tag or an 
+                 error number.
+
+       --diag_remark iag,iag,...
+                 Override  the  normal  error  severity  of   the 
+                 specified diagnostic messages.   The  message(s) 
+                 may be specified using amnemonic error tag or an 
+                 error number.
+
+       --diag_suppress iag,iag,...
+                 Override  the  normal  error  severity  of   the 
+                 specified diagnostic messages.   The  message(s) 
+                 may be specified using amnemonic error tag or an 
+                 error number.
+
+       --diag_warning iag,iag,...
+                 Override  the  normal  error  severity  of   the 
+                 specified diagnostic messages.   The  message(s) 
+                 may be specified using amnemonic error tag or an 
+                 error number.
+
+       --display_error_number
+                 Display the error message number  in  any  diag-
+                 nostic messages that are generated.  The  option 
+                 may be used to determine the error number to  be
+                 used to override the severity  of  a  diagnostic
+                 message.
+
+       --dollar  Accept dollar signs ($) in identifiers.
+
+       -dryrun   Use this option to display  the  invocations  of
+                 the  compiler,  assembler, and linker but do not
+                 execute them.
+
+       -E        Preprocess each .c file and send the  result  to
+                 standard  output.   No compilation, assembly, or
+                 linking is performed.
+
+       -e number
+                 Set   the  C++  front-end  error  limit  to  the 
+                 specified number.  The C++ compiler will abandon
+                 compilation after the specified number of errors.
+
+       --[no_]exceptions
+                 (Disable)  enable  exception  handling  support.
+                 --exceptions is the default.
+
+       -fast     Chooses generally optimal flags for  the  target
+                 platform.     Equivalent    to   "-O2   -Munroll
+                 -Mnoframe" on IA-32 platforms.
+
+       -flags    Display  valid  driver  options  and  additional
+                 driver help information.
+
+       -fpic     (Linux  and  Solaris86  only) Instructs the com-
+                 piler  to  generate  position-independent   code
+                 which  can be used to create shared object files
+                 (dynamically linked libraries).
+
+       -fPIC     Equivalent to -fpic.  Provided for compatibility
+                 with other compilers.
+
+       -G        (Solaris86  only)  Passed  to linker.  Instructs
+                 the  linker  to  create  a  shared  object  file
+                 (dynamically linked library).
+
+       -g        Generate  symbolic debug information.  This also
+                 sets the optimization level to zero, unless a -O
+                 switch is present on the command line.  Symbolic
+                 debugging may give confusing results if an opti-
+                 mization  level  other  than  zero  is selected.
+                 Using -O0 the generated code will be slower than
+                 code generated at other optimization levels.
+                 standard output.
+
+       --gnu_extensions
+                 Allow GNU extensions like "include_next",  which 
+                 are  required  to compile  Linux  system  header 
+                 files.  This is the default on Linux systems.
+
+       -Idirectory
+                 Add directory to the compiler's search path  for
+                 include  files.  For include files surrounded by
+                 < >, each -I directory is searched  followed  by
+                 the standard area.  For include files surrounded
+                 by " ", the directory containing the  file  con-
+                 taining the #include directive is searched, fol-
+                 lowed by the -I  directories,  followed  by  the
+                 standard area.
+
+       --instantiation_dir directory
+                 When   --one_instantiation_per_object  is  used, 
+                 this  defines  directory  as  the  instantiation 
+                 directory.  The default name is template.dir.
+
+       -Kflag    Requests  that the compiler provide special com-
+                 pilation semantics.  The permitted flags are:
+
+                 ieee      Perform float and  double  divides  in
+                           conformance  with  the  IEEE 754 stan-
+                           dard.  This is done by  replacing  the
+                           usual  in-line divide algorithm with a
+                           subroutine call,  at  the  expense  of
+                           performance.   The  default  algorithm
+                           produces results that differ from  the
+                           correctly  rounded  result  by no more
+                           than 3 units in the last place.  Also,
+                           on  some systems, a more accurate math
+                           library may be  linked  if  -Kieee  is
+                           used during the link step.
+
+                 noieee    Use the in-line divide algorithm, link
+                           in the non-IEEE  libraries  if  avail-
+                           able, and disable underflow traps.
+
+                 PIC       Equivalent  to  -fpic.   Provided  for
+                           compatibility with other compilers.
+
+                 pic       Equivalent  to  -fpic.   Provided  for
+                           compatibility with other compilers.
+
+                 trap=option[,option]...
+                           Controls  the  behavior  of  the IA-32
+                           processor  when  IA-32  floating-point
+                           exceptions  occur.   Possible  options
+                           include  fp,  align  (ignored),   inv,
+                           denorm,  divz,  ovf, unf, and inexact.
+                           -Ktrap is only processed when  compil-
+                           ing   a  main  function/program.   The
+                           options inv, denorm, divz,  ovf,  unf,
+                           and  inexzct  correspond  to the IA-32
+                           processor's   exception   mask    bits
+                           invalid     operation,    denormalized
+                           operand,   divide-by-zero,   overflow,
+                           underflow,   and   precision,  respec-
+                           (floating-point exceptions are  masked
+                           -  the  processor recovers from excep-
+                           tions and continues).  If a  floating-
+                           point  exception occurs and its corre-
+                           sponding   mask   bit   is   off   (or
+                           "unmasked"), execution terminates with
+                           an arithmetic exception (C's FPE  sig-
+                           nal).    -Ktrap=fp  is  equivalent  to
+                           -Ktrap=inv,divz,ovf.
+
+       -Ldirectory
+                 Change the default directory in which the linker
+                 searches  for  libraries  to  directory.  If the
+                 linker supports this option, then the option  is
+                 passed  to  the  linker;  otherwise,  the driver
+                 replaces the default library area with directory
+                 and  uses  it  when  constructing  library  path
+                 names.  Note that a library search path  can  be
+                 established using this option only if the linker
+                 supports such functionality.
+
+       -llibrary Load the library liblibrary.a from the  standard
+                 library  directory.  If the linker supports this
+                 option; then the option is passed to the linker.
+                 The  library  name  is  constructed and the full
+                 library path is passed to the linker.   See  the
+                 -L option above.
+
+       --[no]llalign
+                 (Don't)  Do align long long integers  on  64-bit
+                 boundaries.
+
+       -M        Generate  a  list  of make dependences and print
+                 them to stdout.
+
+       -MD       Generate a list of make  dependences  and  print
+                 them  to the file file.d, where file is the root
+                 name of the file under compilation.
+
+       -Mpgflag  See the description for the -Mpgflag options  on
+                 the following pages.
+
+       -m        Display a link map on the standard output.
+
+       -mp       Interpret OpenMP pragmas to explicitly parallel-
+                 ize  regions  of  code for execution by multiple 
+                 threads on a multi-processor system. Most OpenMP
+                 pragmas  as  well as SGI parallelization pragmas
+                 are supported.  See Chapter 11 of the PGI User's 
+                 Guide for more information on these pragmas.
+
+       --no_implicit_include
+                 By default,  if the compiler needs a  definition 
+                 of a template  declared in a  .h file,  it  will 
+                 look  to  the  corresponding  .c  file  for  the 
+                 template  definition.    This  flag  turns  that 
+                 feature off.
+
+       -O[level] Set the optimization level.  If -O is not speci-
+                 fied, then the default level is 1 if -g  is  not
+                 specified,  and 0 if -g is specified.  If a num-
+                 ber is not supplied with -O then  the  optimiza-
+
+                 0         A basic block is generated for each  C
+                           statement.    No  scheduling  is  done
+                           between statements.  No  global  opti-
+                           mizations are performed.
+
+                 1         Scheduling   within   extended   basic
+                           blocks is  performed.   Some  register
+                           allocation  is  performed.   No global
+                           optimizations are performed.
+
+                 2         All level  1  optimizations  are  per-
+                           formed.    In   addition,  traditional
+                           scalar optimizations such as induction
+                           recognition  and loop invariant motion
+                           are performed by the global optimizer.
+
+       -o file   Use  file as the name of the executable program,
+                 rather then the default a.out.
+
+       --one_instantiation_per_object
+                 Put out each template instantiation (function or
+                 static data member) in a separate  object  file.  
+                 The primary object file contains everything else 
+                 in the compilation.  Having  each  instantiation 
+                 in a separate object file is  very  useful  when 
+                 creating libraries, because it allows  the  user 
+                 of the library to pull only  the  instantiations 
+                 that are needed.  This  flag  is  necessary  for 
+                 template libraries that rely on  other  template 
+                 libraries.
+
+       -P        Preprocess each file and leave the output  in  a
+                 file named file.i for each file named file.c.
+
+       +p        Disallow ananchronistic constructs.  Ordinarily,
+                 the  C++  front-end  warns  about  anachronistic 
+                 constructs;   using  the  +p option the compiler 
+                 will  not compile code  containing anachronistic 
+                 constructs.
+
+       -pc       The  IA-32  architecture  implements a floating-
+                 point stack using 8 80-bit registers. Each  reg-
+                 ister  uses  bits  0-63 as the significand, bits
+                 64-78 for the exponent, and bit 79 is  the  sign
+                 bit. This 80-bit real format is the default for-
+                 mat (called the extended format).   When  values
+                 are  loaded  into  the floating point stack they
+                 are automatically converted into  extended  real
+                 format.   The  precision  of  the floating point
+                 stack can be controlled, however, by setting the
+                 precision  control  bits  (bits  8 and 9) of the
+                 floating control  word  appropriately.  In  this
+                 way,  the programmer can explicitly set the pre-
+                 cision to standard IEEE double  using  64  bits,
+                 or  to  single  precision  using  32  bits.  The
+                 default precision setting is  system  dependent.
+                 If  you  use  -pc to alter the precision setting
+                 for a routine, the main program must be compiled
+                 with  the  same value for -pc.  The command line
+                 option -pc val lets the programmer set the  com-
+                 piler's  precision  preference. Valid values for
+                 val are:
+                     32      single precision
+                     64      double precision
+                     80      extended precision
+                 Operations performed exclusively on the floating
+                 point  stack  using  extended precision, without
+                 storing into or loading from memory,  can  cause
+                 problems  with  accumulated  values  within  the
+                 not match expected results.
+
+       --pch     Automatically use and/or  create a  pre-compiled 
+                 header  file.    If   --use_pch or  --create_pch 
+                 (manual  PCH  mode)  appears on the command-line 
+                 following this option, its effect is erased.
+
+       --pch_dir directory
+                 The  directory  in which to  search  for  and/or
+                 create a pre-compiled header file.   This option
+                 may be  used with automatic PCH mode  (--pch) or
+                 manual PCH mode (--create_pch or --use_pch).
+                 
+       --[no]pch_messages
+                 (Disable)   Enable  the  display  of  a  message 
+                 indicating  that a  pre-compiled header file was
+                 created or used in the current compilation.
+                 
+       --prelink_objects
+                 When  used with  --one_instantiation_per_object,
+                 creates  template  instantiations  for a  set of 
+                 objects  that  are  about to  become  a template
+                 library. This is required for template libraries
+                 that reference other template libraries.
+                 
+       -Rdirectory
+                 (Linux and Solaris86 only) Passed to the linker;
+                 always  search directory for shared object files
+                 when running the generated executable.
+
+       -r        Passed to the  linker;  generate  a  re-linkable
+                 object file.
+
+       -rc rcfile
+                 Specifies  the name of a driver startup configu-
+                 ration file.  If rcfile is a full pathname, then
+                 use the specified file.  If rcfile is a relative
+                 pathname, use the file name as found in  in  the
+                 $DRIVER directory.
+
+       -S        Skip  the  assembly  and  link steps.  Leave the
+                 output from the compile step  in  a  file  named
+                 file.s for each file named file.c or file.f.
+
+       -s        Passed  to the linker; strip symbol table infor-
+                 mation.
+
+       -shared   (Linux only) Passed to  the  linker.   Instructs
+                 the  linker  to  generate  a  shared object file
+                 (dynamically linked library).
+
+       -show     Produce driver help information  describing  the
+                 current driver configuration.
+
+       -t arg    Control instantiation of template functions. The
+                 argument can be: all, none, local, or used.
+
+                 all       Specifies  that all template functions
+                           are instantiated whether or  not  they 
+                           are used.
+
+                 none      Specifies  that no  template functions 
+                           are instantiated.
+
+                 local     Specifies that only functions that are
+                           used in compilation are  instantiated,
+                           and they are forced to be local. NOTE:
+                           This  may  cause  multiple  copies  of 
+                           local static variables. If this occurs, 
+                           the program may not execute correctly.
+
+                 used      Specifies that only functions that are
+                           used in compilation are instantiated.
+
+       -time     Print  execution  times for the various compila-
+                 tion steps.
+
+       -tp       Specify the type of the target processor; possi-
+                 bilities  are  -tp p5 for Pentium processors and
+                 -tp p6 for Pentium Pro or Pentium II processors.
+                 The default in the absence of the -tp flag is to
+                 compile for the type of CPU on  which  the  com-
+                 piler is running.
+
+       -Uname    Remove  any  initial  definition  of name in the
+                 preprocessor.  The only names predefined by  the
+                 preprocessor itself are the standard ANSI C pre-
+                 defined macros.  The driver may predefine  other
+                 names  (see  the  following  description for the
+                 -Mnostddef option).  Since all  -D  options  are
+                 processed  before  all -U options, the -U option
+                 override -D options.  NOTE:  ANSI  C  predefined
+                 macros  can be defined and undefined on the com-
+                 mand line, but not with  #define  and  #undefine
+                 directives in the source.
+                 ence.
+
+       --use_pch Use a  pre-compiled header file of the specified 
+                 name  as part  of the  current compilation.   If
+                 --pch   (automatic  PCH  mode)  appears  on  the 
+                 command-line  following this option,  its effect 
+                 is erased.
+
+       --[no_]using_std 
+                 (Disable)    Enable  implicit  use  of  the  std 
+                 namespace   when   standard   header  files  are 
+                 included. --using_std is the default.
+
+       -V        Display version messages and other  information.
+
+       -v        Verbose  mode.   Print  out the command line for
+                 each tool before it is executed.
+
+       -Wpass,option[,option...]
+                 Pass the options to the  specified  pass.   Each
+                 comma-delimited  option  is passed as a separate
+                 argument.  The passes are: 0 for the compiler, a
+                 for the assembler, and l for the linker.
+
+       -w        Do not print warning messages.
+
+       -Xlevel   Specify  the  degree of ANSI C conformance.  The
+                 level argument can be either a or c { a | c }.
+
+                 a    Use ANSI mode.  The compiled language  con-
+                      forms to all new ANSI features.
+
+                 c    Use  the  conformance  mode.   The compiled
+                      language conforms to ANSI C,  but  warnings
+                      may be produced about some extensions.
+
+                 s    The compiled language conforms to K&R C.
+
+                 t    The  compiled  language  conforms to K&R C.
+                      The  compiler  may  produce  warnings   for
+                      semantics  where ANSI C and K&R C conflict.
+
+       -Xm       Allow dollar signs ($) in names.
+
+       -Ypass,directory
+                 Look in directory for pass pass, rather then  in
+                 the standard area.  The passes are:
+
+                 0         Search   for  the  pgc  executable  in
+                           directory.
+
+                 a         Search for the assembler executable in
+                           directory.
+
+                 l         Search  for  the  linker executable in
+                           directory.
+
+                 S
+                           Search for the startup object files in
+                           directory.
+
+                 L         If the linker supports the -YL option,
+                           then pass the option -YL,directory  to
+                           the  linker.  Otherwise, use directory
+                           as the standard library location.
+                           then  pass the option -YU,directory to
+                           the linker.  Otherwise this option  is
+                           ignored.
+
+                 I         Set  the  compiler's  standard include
+                           directory to directory.  The  standard
+                           include  directory is set to a default
+                           value by the driver and can  be  over-
+                           ridden by this option.
+
+       -y        Arguments are passed to the linker.
+
+       -Mpgflag  Request  PGI-specific actions from the compiler.
+                 Many of pgflags optionally begin with  no  (e.g.
+                 [no]list).   If the default of such an option is
+                 the no variant, this is indicated by no  appear-
+                 ing in bold italics as in [nnoo]list.  The permit-
+                 ted pgflags are:
+
+                 anno      Produce  annotated   assembly   files,
+                           where  source  code is intermixed with
+                           assembly language.   -Mkeepasm  or  -S
+                           must be used as well.
+
+                 [no]asmkeyword
+                           (Don't)  allow  the  asm  keyword in C
+                           source   code.    The    format    is:
+                           asm("<text>")
+
+                 [no]bounds
+                           Enable  (disable)  array bounds check-
+                           ing.  Bounds checking is  not  applied
+                           to a subscripting pointer.
+
+                 [no]builtin
+                           (Don't)  Do  compile with math subrou-
+                           tine  builtin  support,  which  causes
+                           selected  math  library routines to be
+                           inlined.
+
+                 cache_align
+                           Align  unconstrained  data  objects of
+                           size greater than or equal to 16 bytes
+                           on cache-line  boundaries.   An uncon-
+                           strained object is a variable or array
+                           that  is  not a member of an aggregate
+                           structure  or  common  block,  is  not
+                           allocatable,  and is not an automatic
+                           array.
+
+                 chkfpstk  Check  for internal consistency of the
+                           IA-32 FP stack in the  prologue  of  a
+                           function  and  after  returning from a
+                           function  or  subroutine call.  If the
+                           PGI_CONTINUE  environment  variable is
+                           set,  the  stack will be automatically
+                           cleaned  up and execution will contin-
+                           ue.  There  is  a  performance penalty
+                           associated  with  stack  cleanup.   If
+                           PGI_CONTINUE  is  set  to verbose, the
+                           stack will be automatically cleaned up
+                           and  execution  will  continue after a
+                           warning message is printed.
+
+                 chkstk    Check  the  stack  for available space
+                           upon entry to and before the start  of
+                           a  parallel  region.  Useful when many
+                           private variables are declared.
+
+                 concur[=option[,option,...]]
+                           Instructs the compiler to enable auto-
+                           cessors  will be used to execute loops
+                           which the compiler  determines  to  be
+                           parallelizable.    When  linking,  the
+                           -Mconcur switch must be  specified  or
+                           unresolved references will occur.  The
+                           NCPUS  environment  variable  controls
+                           how  many  processors  will be used to
+                           execute   parallelized   loops.    The
+                           options can be one or more of the fol-
+                           lowing:
+
+                           altcode[:n]
+                                     Instructs  the  parallelizer
+                                     to generate alternate scalar
+                                     code for parallelized loops.
+                                     If   altcode   is  specified
+                                     without arguments, the  par-
+                                     allelizer    determines   an
+                                     appropriate  cutoff   length
+                                     and generates scalar code to
+                                     be  executed  whenever   the
+                                     loop  count  is less than or
+                                     equal to  that  length.   If
+                                     altcode:n  is specified, the
+                                     scalar altcode  is  executed
+                                     whenever  the  loop count is
+                                     less than or equal to n.
+
+                           noaltcode If noaltcode  is  specified,
+                                     the  parallelized version of
+                                     the loop is always  executed
+                                     regardless   of   the   loop
+                                     count.
+
+                           dist:block
+                                     Parallelize with block  dis-
+                                     tribution.        Contiguous
+                                     blocks of  iterations  of  a
+                                     parallelizable    loop   are
+                                     assigned  to  the  available
+                                     processors.
+
+                           dist:cyclic
+                                     Parallelize with cyclic dis-
+                                     tribution.   The   outermost
+                                     parallelizable  loop  in any
+                                     loop nest  is  parallelized.
+                                     If  a  parallelized  loop is
+                                     innermost,  its   iterations
+                                     are  allocated to processors
+                                     cyclically.  For example, if
+                                     there  are 3 processors exe-
+                                     etc;  processor  1  performs
+                                     iterations  1,  4,  7,  etc;
+                                     and  processor  2   performs
+                                     iterations 2, 5, 8, etc.
+
+                           cncall    Loops  containing  calls are
+                                     safe to parallelize.   Also,
+                                     no    minimum   loop   count
+                                     threshold must be  satisfied
+                                     before  parallelization will
+                                     occur, and  last  values  of
+                                     scalars  are  assumed  to be
+                                     safe.
+
+                           noassoc   Disables parallelization  of
+                                     loops with reductions.
+
+                 [no]dalign
+                           (Don't) align doubles in structures on
+                           8-byte  boundaries.   -Mnodalign   may
+                           lead to data alignment exceptions.
+
+                 [no]depchk
+                           (Don't)  assume  that  potential  data
+                           dependencies  exist.   -Mnodepchk  may
+                           result    in   incorrect   code;   the
+                           -Msafeptr switch provides a less  dan-
+                           gerous  way  to  accomplish  the  same
+                           thing.
+
+                 dollar,char
+                           Set the character used to replace dol-
+                           lar   signs   in  names  to  be  char.
+                           Default is an underscore (_).
+
+                 extract[=option[,option,...]]
+                           Pass options to the  function  extrac-
+                           tor.   The  -o filename option must be
+                           used  with  this  switch  to  name   a
+                           library.
+
+                           [name:]function
+                                     A   non-numeric  option  not
+                                     containing   a   period   is
+                                     assumed  to  be  a  function
+                                     name.  The named function is
+                                     extracted.    If   name:  is
+                                     specified, what  follows  is
+                                     always  the  name of a func-
+                                     tion.
+
+
+                                     A numeric option is  assumed
+                                     to  be  a  size.   Functions
+                                     containing  number  or  less
+                                     statements   are  extracted.
+                                     If both number and  function
+                                     are  specified,  then  func-
+                                     tions  matching  the   given
+                                     name(s)  or meeting the size
+                                     requirements, are extracted.
+
+                 fcon      Treat non-suffixed floating point con-
+                           stants as float, rather  than  double.
+                           This  may  improve  the performance of
+                           single-precision code.
+
+                 info[=option[,option,...]]
+                           Emit  useful  information  to  stderr.
+                           The options are:
+
+                           time | stat
+                                     Emit compilation statistics.
+
+                           loop      Emit    information    about
+                                     loops.  This includes infor-
+                                     mation  about  vectorization
+                                     and loop unrolling.
+
+                           inline    Emit information about func-
+                                     tions extracted and inlined.
+
+                           sym       Emit  symbol  names  as com-
+                                     ments in assembly file.
+
+                           all       All of the above.
+
+                 inform,level
+                           Specify the  minimum  level  of  error
+                           severity  that  the  compiler displays
+                           during compilation.
+
+                           fatal     instructs  the  compiler  to
+                                     display   fatal  error  mes-
+                                     sages.
+
+                           severe    instructs  the  compiler  to
+                                     display   severe  and  fatal
+                                     error messages.
+
+                           warn      instructs  the  compiler  to
+                                     display  warning, severe and
+                                     fatal error messages.
+
+                                     instructs  the  compiler  to
+                                     display  all  error messages
+                                     (inform,  warn,  severe  and
+                                     fatal).
+
+                 inline[=option[,option,...]]
+                           Pass  options to the function inliner.
+                           The options are:
+
+                           [lib:]filename.ext
+                                     An   option   containing   a
+                                     period  is  assumed to be an
+                                     inline library created by  a
+                                     previous  -Mextract  option.
+                                     If  lib:  is  specified,  no
+                                     period  is necessary.  Func-
+                                     tions  from  the   specified
+                                     library  are inlined.  If no
+                                     library is specified,  func-
+                                     tions  are  extracted from a
+                                     temporary  library   created
+                                     during an extract prepass.
+
+                           [name:]function
+                                     A   non-numeric  option  not
+                                     containing   a   period   is
+                                     assumed  to  be  a  function
+                                     name.  If  name:  is  speci-
+                                     fied, what follows is always
+                                     the name of a function.
+
+                           [size:]number
+                                     A numeric option is  assumed
+                                     to  be  a  size.   Functions
+                                     containing  number  or  less
+                                     statements  are inlined.  If
+                                     both number and function are
+                                     specified,   then  functions
+                                     matching the  given  name(s)
+                                     or meeting the size require-
+                                     ments, are inlined.
+
+                           levels:number
+                                     number of levels of inlining
+                                     are  performed.  The default
+                                     is 1.
+
+                 keepasm   Keep the  assembly  file  for  each  C
+                           source  file, but continue to assemble
+                           and link the program.  This is  mainly
+                           for use in compiler performance analy-
+                           sis and debugging.
+
+                 neginfo=option[,option]...
+                           Instructs  the  compiler  to   produce
+                           information  on  why certain optimiza-
+                           tions  are  not  performed.   Possible
+                           value  for  option  include concur and
+                           loop.
+
+                 noframe   Eliminate operations  that  set  up  a
+                           true  stack  frame  pointer  for func-
+                           tions.
+
+                 noopenmp  When the option -mp is present, ignore
+                           the OpenMP pragmas.
+
+                 nosgimp   When the option -mp is present, ignore
+                           the SGI parallelization pragmas.
+
+                 nostddef  Do not predefine  any  macros  to  the
+                           preprocessor  when  compiling a C pro-
+                           gram.  The normal predefined macro is:
+                           -Dunix.
+
+                 nostdinc  Do not search in the standard location
+                           for include files when those files are
+                           not found elsewhere.
+
+                 nostdlib  Do  not link in the standard libraries
+                           when linking a program.
+
+                 nostartup Do not link in the usual startup  rou-
+                           tine.  This routine contains the entry
+                           point for the program.
+
+                 prof[=option[,option,...]]
+                           Set profile options. Normally, the  -q
+                           or -p switches are used for this; how-
+                           ever, on some systems, it is desirable
+                           to override the default method of pro-
+                           filing.  See the PGI profiler  manual,
+                           or  the  system  profiler  manual, for
+                           further information.
+
+                           func      Perform  PGI-style  function
+                                     level profiling.
+
+                           lines     Perform PGI-style line level
+                                     profiling.
+
+                           mcount    Perform function level  pro-
+                                     filing.
+
+                 safe_lastval
+                           In  the  case  where  a scalar is used
+                           after a loop, but is  not  defined  on
+                           every  iteration of the loop, the com-
+                           piler does not by default  parallelize
+                           the  loop.  However, this option tells
+
+                 safeptr[=option[,option,...]]
+                           Override  data  dependence  between  C
+                           pointers and arrays.  This option must
+                           be  used with care since the potential
+                           exists for code to be  generated  that
+                           will result in unexpected or incorrect
+                           results as is defined by ANSI C.  How-
+                           ever,  when used properly, this option
+                           has the potential to  greatly  enhance
+                           the  performance  of  code, especially
+                           floating point oriented loops.  Combi-
+                           nations of the options may be used and
+                           interact appropriately.
+
+                           dummy | arg
+                                     C dummy arguments  (pointers
+                                     and arrays) are treated with
+                                     the   same    copyin/copyout
+                                     semantics  as  Fortran dummy
+                                     arguments.
+
+                           auto      C local  or  auto  variables
+                                     (pointers  and  arrays)  are
+                                     assumed not  to  overlap  or
+                                     conflict   with  other  data
+                                     objects and are independent.
+
+                           static    C static variables (pointers
+                                     and arrays) are assumed  not
+                                     to  overlap or conflict with
+                                     other data objects  and  are
+                                     independent.
+
+                           global    C global or extern variables
+                                     (pointers  and  arrays)  are
+                                     assumed  not  to  overlap or
+                                     conflict  with  other   data
+                                     objects and are independent.
+
+                 schar     Specify signed char characters.   Also
+                           see the -Muchar option.
+
+                 [no]single
+                           (Don't)  suppress  the  ANSI-specified
+                           conversion of  float  to  double  when
+                           passing  arguments  to a function with
+                           no prototype in scope.   -Msingle  may
+                           result in faster code when single pre-
+                           cision is used a lot, but is  non-ANSI
+                           compliant.
+
+                           (Don't)  sign  extend when a narrowing
+                           conversion  overflows.   For  example,
+                           when  -Msignextend is in effect and an
+                           integer containing the value 65535  is
+                           converted to a short, the value of the
+                           short will be -1.  This option is pro-
+                           vided  for  compatibility  with  other
+                           compilers, even though ANSI  C  speci-
+                           fies  that  the result of such conver-
+                           sions are undefined.  -Msignextend  is
+                           the default.
+
+                 uchar     Treat   plain   char  declarations  as
+                           unsigned char declarations.  Also  see
+                           the -Mschar option.
+
+                 unroll[=option [,option...]]
+                           Invokes  the loop unroller.  This also
+                           sets the optimization level  to  2  if
+                           the  level is set to less than 2.  The
+                           option is one of the following:
+
+                           c:m       Instructs  the  compiler  to
+                                     completely unroll loops with
+                                     a constant loop  count  less
+                                     than  or  equal to m, a sup-
+                                     plied  constant.   If   this
+                                     value is not supplied, the m
+                                     count is set to 4.
+
+                           n:u       instructs  the  compiler  to
+                                     unroll u times, a loop which
+                                     is not completely  unrolled,
+                                     or  has  a non-constant loop
+                                     count.  If  u  is  not  sup-
+                                     plied, the unroller computes
+                                     the number of times a candi-
+                                     date loop is unrolled.
+
+                 nounroll  Instructs  the  compiler not to unroll
+                           loops.
+
+                 vect[=option[,option,...]]
+                           Pass options to the  internal  vector-
+                           izer.  If no option list is specified,
+                           then the  following  vector  optimiza-
+                           tions     are    used:    assoc,cache-
+                           size:262144.  The vect options are:
+
+                           assoc     Instructs the vectorizer  to
+                                     enable certain associativity
+                                     conversions that can  change
+                                     typical  optimization  is to
+                                     change an arithmetic  opera-
+                                     tion to an arithmetic opera-
+                                     tion that is  mathematically
+                                     correct, but can be computa-
+                                     tionally different,  due  to
+                                     round-off error.
+
+                           noassoc   Instructs  the vectorizer to
+                                     disable  associativity  con-
+                                     versions.
+
+                           cachesize[:number]
+                                     Instructs   the  vectorizer,
+                                     when performing cache tiling
+                                     optimizations,  to  assume a
+                                     cache size of number.
+
+                           sse       Instructs  the vectorizer to
+                                     search  for loops, and where
+                                     possible,  generate calls to
+                                     equivalent  hand-tuned func-
+                                     tions  which use the Pentium
+                                     III instructions.
+
+                           nosse     Instructs  the vectorizer to
+                                     disable  the  recognition of
+                                     SSE-equivalent loops.
+
+
+
+FILES
+
+       a.out                         executable output file, UNIX
+       file.a                        library of object files
+       file.C                        C++ source file
+       file.c                        C++ source file
+       file.cc                       C++ source file
+       file.cpp                      C++ source file
+       file.i                        C++  source  file after pre-
+                                     processing
+       file.o                        object file
+       file.s                        assembler source file
+
+       Executables   reside   in   one   of:    $PGI/linux86/bin,
+       $PGI/osf86/bin,   or  $PGI/solaris86/bin;   libraries  and 
+       objects reside in one of $PGI/linux86/lib, $PGI/osf86/lib, 
+       or $PGI/solaris86/lib; PGI is an environment variable that 
+       is set to the root of the compiler installation directory.  
+       If  PGI  is  not  set,  the  default  is  /usr/pgi on UNIX 
+       systems.   Below,  <target>  is one of  linux86, osf86, or 
+       solaris86.
+
+       $PGI/<target>/bin/.pgCCrc     Default  driver startup con-
+                                     figuration file
+       $PGI/<target>/bin/.pgirc      Default driver startup  con-
+                                     figuration file 
+       $PGI/<target>/bin/linux86rc   Default  driver startup con-
+                                     figuration file (Linux only)
+       $PGI/<target>/bin/osf86rc     Default  driver startup con-
+                                     figuration file (OSF only)
+       $PGI/<target>/bin/solaris86rc Default driver startup  con-
+                                     figuration file (Sol86 only)
+       $PGI/<target>/bin/pgCC        C++ compilation driver
+       $PGI/<target>/bin/pgCCrc      C++   driver   configuration 
+                                     file
+       $PGI/<target>/bin/pgc         ANSI C compiler
+       $PGI/<target>/bin/pgc_ex      ANSI C function extractor
+       $PGI/<target>/bin/pgcc        ANSI C compilation driver
+       $PGI/<target>/bin/pgcomprc    C  compiler  driver  startup 
+                                     configuration file
+       $PGI/<target>/bin/pgdecode    C++ name demangler
+       $PGI/<target>/bin/pgcpp1      C++ pre-pass 1
+       $PGI/<target>/bin/pgcpp2      C++ pre-pass 2
+       $PGI/<target>/bin/pgcpp2ex    C++ pre-pass extractor
+       $PGI/<target>/bin/pgmunch     C++ constructor generator
+       $PGI/<target>/bin/pgprelnk    C++ template generator
+       $PGI/<target>/bin/sharedrc    Default driver startup  con-
+                                     figuration file
+       $PGI/<target>/lib/initmp.o    SMP initialization routine
+       $PGI/<target>/lib/libC.a      C++ library
+       $PGI/<target>/lib/libpgc.a    C startup routines
+       $PGI/<target>/lib/libstrm.a   C++ STL, part 1
+       $PGI/<target>/lib/libstd.a    C++ STL, part 2
+       $PGI/<target>/lib/libpgmp.a   C++ MP library
+       $PGI/<target>/lib/crt1.o      C startup routine (solaris86
+                                     only)
+       $PGI/<target>/lib/crti.o      C startup routine (solaris86
+                                     only)
+       $PGI/<target>/lib/crtn.o      C startup routine (solaris86
+                                     only)
+       $PGI/<target>/lib/subchk.o    C/C++ bounds-checking
+       $PGI/<target>/include         Include files for C
+       $PGI/<target>/include/CC      Include files for C++
+
+
+SEE ALSO
+
+       pgcc,  pgf77, pgf90, pghpf, pgprof, pgdbg, Xpgdbg, and the
+       PGI User's Guide.
+
+
+
+DIAGNOSTICS
+
+       The compiler produces information and error messages as it
+       translates  the  input  program.  The linker and assembler
+       may issue their own error messages.
