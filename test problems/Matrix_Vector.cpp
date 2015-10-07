@@ -13,7 +13,7 @@ int main()
 	double **A, *x, *b, t1, t2, *times, t;
 	
 	N = 10000;
-	M = 10;
+	M = 20;
 	
 	x = (double*) malloc(N*sizeof(double));
 	b = (double*) malloc(N*sizeof(double));
@@ -33,7 +33,7 @@ int main()
 		t1 = clock();
 		Matrix_Vector(A, x, b, N);
 		t2 = clock();
-		times[i] = 1.0 * (t1 - t2) /CLOCKS_PER_SEC;
+		times[i] = 1.0 * (t2 - t1) /CLOCKS_PER_SEC;
 	}
 	t = 0.0;
 	for(i=0;i<M;i++) t = t + times[i];
@@ -48,15 +48,20 @@ int main()
 
 void Matrix_Vector(double **A, double *x, double *b, int N)
 {
-	#pragma acc parallel loop
 	int i, j;
-
+#pragma acc data copyin(A[0:N][0:N],x[0:N]) copyout(b[0:N])
+{
+#pragma acc region
+{
+	#pragma acc loop independent vector(32)
 	for(i=0;i<N;i++)
 	{
 		b[i] = 0.0;
+		#pragma acc loop independent vector(32)
 		for(j=0;j<N;j++) b[i] = b[i] + A[i][j] * x[j];
-
 	}
+}
+}
 }
 
 void print_vector(double *x, int N)
