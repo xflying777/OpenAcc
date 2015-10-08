@@ -241,8 +241,6 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 		pp = 0;
 		n = 2;
 		
-		#pragma acc data copyin(y_r[0:N], y_i[0:N])
-		#pragma acc kernels loop present(n, theta, w_br, w_bi, a_r, a_i)
 		while(pp < p & p > 0)
 		{
 			for(k=0;k<n/2;k++)
@@ -278,8 +276,6 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 		n = 3*P;
 		s = sqrt(3)/2;
 		
-		#pragma acc data copyin(y_r[0:N], y_i[0:N])
-		#pragma acc kernels loop present(n, theta, w_br, w_bi, w_cr, w_ci, a_r, a_i, b_r, b_i, c_r, c_i)
 		while(qq < q & q > 0)
 		{
 			for(k=0;k<n/3;k++)
@@ -325,8 +321,6 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 		c = -cos(4.0*M_PI/5);
 		d = sin(4.0*M_PI/5);
 		
-		#pragma acc data copyin(y_r[0:N], y_i[0:N])
-		#pragma acc kernels loop present(n, theta, w_br, w_bi, w_cr, w_ci, w_dr, w_di, w_er, w_ei, a_r, a_i, b_r, b_i, c_r, c_i, d_r, d_i, e_r, e_i)
 		while(rr < r & r > 0)
 		{
 			for(k=0;k<n/5;k++)
