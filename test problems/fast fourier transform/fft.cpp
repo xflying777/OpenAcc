@@ -237,7 +237,7 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 	if(p > 0)
 	{
 		double theta, w_br, w_bi, a_r, a_i;
-		int k, n, pp;
+		int k, *restrict n, pp;
 		pp = 0;
 		n = 2;
 		

@@ -12,8 +12,8 @@ int main()
 	int i, j, N, M;
 	double **A, *x, *b, t1, t2, *times, t;
 	
-	N = 10000;
-	M = 20;
+	N = 10;
+	M = 1;
 	
 	x = (double*) malloc(N*sizeof(double));
 	b = (double*) malloc(N*sizeof(double));
@@ -38,11 +38,11 @@ int main()
 	t = 0.0;
 	for(i=0;i<M;i++) t = t + times[i];
 	t = t / M;
-/*	
-	print_vector(x, N);
-	print_matrix(A, N);
+	
+//	print_vector(x, N);
+//	print_matrix(A, N);
 	print_vector(b, N);
-*/	
+	
 	printf("everage times = %f secs", t);
 }
 
