@@ -76,23 +76,23 @@ int Generate_N(int p, int q, int r)
 	return N;
 }
 
-void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r)
+void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, double *restrict y_i, int p, int q, int r)
 {
 	//bit-reverse
 	int i, j, pp, qq, bse, N, M;
 	N = 1;
 	N = Generate_N(p, q, r);
 	
-#pragma acc data copyin(x_r[0:N], x_i[0:N]) copyout(y_r[0:N], y_i[0:N])
-#pragma acc kernels
+	#pragma acc data copyin(x_r[0:N], x_i[0:N]) copyout(y_r[0:N], y_i[0:N])
+	#pragma acc kernels
 	for(i=0;i<N;i++)
 	{
-		y_r[i]=x_r[i];
-		y_i[i]=x_i[i];
+		y_r[i] = x_r[i];
+		y_i[i] = x_i[i];
 	}
 	j=0;
 	
-#pragma acc kernels
+	#pragma acc kernels
 	for(i=1;i<N;i++)
 	{
 		M=N;
@@ -244,11 +244,13 @@ void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r
 		#pragma acc kernels
 		while(pp < p & p > 0)
 		{
+			#pragma acc loop independent
 			for(k=0;k<n/2;k++)
 			{
 				theta = -2.0*k*M_PI/n;
 				w_br = cos(theta);
 				w_bi = sin(theta);
+				#pragma acc loop independent 
 				for(i=k;i<N;i+=n)
 				{
 					j = i + n/2;
@@ -280,6 +282,7 @@ void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r
 		#pragma acc kernels
 		while(qq < q & q > 0)
 		{
+			#pragma acc loop independent
 			for(k=0;k<n/3;k++)
 			{
 				theta = -2.0*k*M_PI/n;
@@ -287,6 +290,7 @@ void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r
 				w_bi = sin(theta);
 				w_cr = cos(2*theta);
 				w_ci = sin(2*theta);
+				#pragma acc loop independent
 				for(i=k;i<N;i+=n)
 				{
 					j = i + n/3;
@@ -326,8 +330,10 @@ void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r
 		#pragma acc kernels
 		while(rr < r & r > 0)
 		{
+			#pragma acc loop independent
 			for(k=0;k<n/5;k++)
 			{
+				#pragma acc loop independent
 				theta = -2.0*k*M_PI/n;
 				w_br = cos(theta);
 				w_bi = sin(theta);
