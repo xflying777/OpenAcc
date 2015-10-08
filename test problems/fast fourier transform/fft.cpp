@@ -3,14 +3,14 @@
 #include <math.h>
 #include <time.h>
 
-int FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r);
-int Initial(double *x, double *y, int N);
-int Print_Complex_Vector(double *y_r, double *y_i, int N);
+void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r);
+void Initial(double *x, double *y, int N);
+void Print_Complex_Vector(double *y_r, double *y_i, int N);
 int Generate_N(int p, int q, int r);
 
 int main()
 {
-	int i, k, m, n, p, q, r, N;
+	int i, m, n, p, q, r, N;
 	double *y_r, *y_i, *x_r, *x_i, w_r, w_i, everage, *t;
 	clock_t t1, t2;
 	
@@ -47,7 +47,7 @@ int main()
 	return 0;
 } 
 
-int Initial(double *x, double *y, int N)
+void Initial(double *x, double *y, int N)
 {
 	int n;
 	for(n=0;n<N;++n)
@@ -57,7 +57,7 @@ int Initial(double *x, double *y, int N)
 	}
 }
 
-int Print_Complex_Vector(double *y_r, double *y_i, int N)
+void Print_Complex_Vector(double *y_r, double *y_i, int N)
 {
 	int n;
 	for(n=0;n<N;++n)
@@ -65,7 +65,6 @@ int Print_Complex_Vector(double *y_r, double *y_i, int N)
 		if (y_i[n] >=0) printf("%d : %f +%f i\n", n, y_r[n], y_i[n]);
 		else printf("%d : %f %f i\n", n, y_r[n], y_i[n]);
 	}
-	return 0;
 }
 
 int Generate_N(int p, int q, int r)
@@ -77,14 +76,14 @@ int Generate_N(int p, int q, int r)
 	return N;
 }
 
-int FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r)
+void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r)
 {
 	//bit-reverse
 	int i, j, pp, qq, bse, N, M;
 	N = 1;
 	N = Generate_N(p, q, r);
 	
-#pragma acc data copyin(x_r[0:N],x_i[0:N]) copyout(y[0:N])
+#pragma acc data copyin(x_r[0:N], x_i[0:N]) copyout(y_r[0:N], y_i[0:N])
 #pragma acc kernals
 	for(i=0;i<N;i++)
 	{
