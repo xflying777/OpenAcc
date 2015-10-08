@@ -51,16 +51,17 @@ void Matrix_Vector(double **A, double *x, double *b, int N)
 	int i, j;
 #pragma acc data copyin(A[0:N][0:N],x[0:N]) copyout(b[0:N])
 {
-#pragma acc region
-{
-	#pragma acc loop independent vector(32)
+//#pragma acc region
+//{
+//	#pragma acc loop independent vector(32)
+#pragma acc kernels loop present(b,A,x)
 	for(i=0;i<N;i++)
 	{
 		b[i] = 0.0;
-		#pragma acc loop independent vector(32)
+//		#pragma acc loop independent vector(32)
 		for(j=0;j<N;j++) b[i] = b[i] + A[i][j] * x[j];
 	}
-}
+//}
 }
 }
 
