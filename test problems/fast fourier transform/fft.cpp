@@ -84,8 +84,8 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 	//bit-reverse
 	int i, j, pp, qq, bse, M;
 	
-	#pragma acc data copyin(x_r[0:N], x_i[0:N]) copyout(y_r[0:N], y_i[0:N])
-	#pragma acc kernels
+#pragma acc data copyin(x_r[0:N], x_i[0:N]) copyout(y_r[0:N], y_i[0:N])
+#pragma acc kernels
 	for(i=0;i<N;i++)
 	{
 		y_r[i] = x_r[i];
@@ -237,20 +237,19 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 	if(p > 0)
 	{
 		double theta, w_br, w_bi, a_r, a_i;
-		int k, *restrict n, pp;
+		int k, n, pp;
 		pp = 0;
 		n = 2;
 		
-		#pragma acc kernels
+		#pragma acc data copyin(y_r[0:N], y_i[0:N])
+		#pragma acc kernels loop present(n, theta, w_br, w_bi, a_r, a_i)
 		while(pp < p & p > 0)
 		{
-			#pragma acc loop independent
 			for(k=0;k<n/2;k++)
 			{
 				theta = -2.0*k*M_PI/n;
 				w_br = cos(theta);
 				w_bi = sin(theta);
-				#pragma acc loop independent 
 				for(i=k;i<N;i+=n)
 				{
 					j = i + n/2;
@@ -279,10 +278,10 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 		n = 3*P;
 		s = sqrt(3)/2;
 		
-		#pragma acc kernels
+		#pragma acc data copyin(y_r[0:N], y_i[0:N])
+		#pragma acc kernels loop present(n, theta, w_br, w_bi, w_cr, w_ci, a_r, a_i, b_r, b_i, c_r, c_i)
 		while(qq < q & q > 0)
 		{
-			#pragma acc loop independent
 			for(k=0;k<n/3;k++)
 			{
 				theta = -2.0*k*M_PI/n;
@@ -290,7 +289,6 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 				w_bi = sin(theta);
 				w_cr = cos(2*theta);
 				w_ci = sin(2*theta);
-				#pragma acc loop independent
 				for(i=k;i<N;i+=n)
 				{
 					j = i + n/3;
@@ -327,13 +325,12 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 		c = -cos(4.0*M_PI/5);
 		d = sin(4.0*M_PI/5);
 		
-		#pragma acc kernels
+		#pragma acc data copyin(y_r[0:N], y_i[0:N])
+		#pragma acc kernels loop present(n, theta, w_br, w_bi, w_cr, w_ci, w_dr, w_di, w_er, w_ei, a_r, a_i, b_r, b_i, c_r, c_i, d_r, d_i, e_r, e_i)
 		while(rr < r & r > 0)
 		{
-			#pragma acc loop independent
 			for(k=0;k<n/5;k++)
 			{
-				#pragma acc loop independent
 				theta = -2.0*k*M_PI/n;
 				w_br = cos(theta);
 				w_bi = sin(theta);
