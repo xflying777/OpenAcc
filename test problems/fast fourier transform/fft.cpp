@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r);
+void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r, int N);
 void Initial(double *x, double *y, int N);
 void Print_Complex_Vector(double *y_r, double *y_i, int N);
 int Generate_N(int p, int q, int r);
@@ -26,11 +26,13 @@ int main()
 	t = (double *) malloc(20*sizeof(double));
 	
 	Initial(x_r, x_i, N);
+	N = 1;
+	N = Generate_N(p, q, r);
 	m = 1;
 	for(i=0;i<m;i++)
 	{
 		t1 = clock();
-		FFT(x_r, x_i, y_r, y_i, p, q, r);
+		FFT(x_r, x_i, y_r, y_i, p, q, r, N);
 		t2 = clock();
 		t[i] = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 		printf("Fast FTT: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
@@ -76,12 +78,11 @@ int Generate_N(int p, int q, int r)
 	return N;
 }
 
-void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, double *restrict y_i, int p, int q, int r)
+void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, double *restrict y_i, int p, int q, int r, int N)
+//void FFT(double *x_r, double *x_i, double *y_r, double *y_i, int p, int q, int r, int N)
 {
 	//bit-reverse
-	int i, j, pp, qq, bse, N, M;
-	N = 1;
-	N = Generate_N(p, q, r);
+	int i, j, pp, qq, bse, M;
 	
 	#pragma acc data copyin(x_r[0:N], x_i[0:N]) copyout(y_r[0:N], y_i[0:N])
 	#pragma acc kernels
