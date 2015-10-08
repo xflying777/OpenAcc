@@ -92,7 +92,6 @@ void FFT(double *restrict x_r, double *restrict x_i, double *restrict y_r, doubl
 	}
 	j=0;
 	
-	#pragma acc kernels
 	for(i=1;i<N;i++)
 	{
 		M=N;
