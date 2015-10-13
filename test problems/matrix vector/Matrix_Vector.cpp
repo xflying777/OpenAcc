@@ -3,22 +3,22 @@
 #include <math.h>
 #include <time.h>
 
-void Matrix_Vector(double **A, double *x, double *b, int N);
-void print_vector(double *x, int N);
-void print_matrix(double **A, int N);
+void Matrix_Vector(float **A, float *x, float *b, int N);
+void print_vector(float *x, int N);
+void print_matrix(float **A, int N);
 
 int main()
 {
 	int i, j, N, M;
-	double **A, *x, *b, t1, t2, *times, t;
+	float **A, *x, *b, t1, t2, *times, t;
 	
 	N = 10;
 	M = 1;
 	
-	x = (double*) malloc(N*sizeof(double));
-	b = (double*) malloc(N*sizeof(double));
-	A = (double**) malloc(N*sizeof(double*));
-	A[0] = (double*) malloc(N*N*sizeof(double));
+	x = (float*) malloc(N*sizeof(float));
+	b = (float*) malloc(N*sizeof(float));
+	A = (float**) malloc(N*sizeof(float*));
+	A[0] = (float*) malloc(N*N*sizeof(float));
 	for(i=1;i<N;i++) A[i] = A[i-1] + N;
 	
 	for(i=0;i<N;i++) x[i] = i;
@@ -27,7 +27,7 @@ int main()
 		for(j=0;j<N;j++) A[i][j] = i + j;
 	}
 	
-	times = (double*) malloc(M*sizeof(double));
+	times = (float*) malloc(M*sizeof(float));
 	for(i=0;i<M;i++)
 	{
 		t1 = clock();
@@ -46,15 +46,12 @@ int main()
 	printf("everage times = %f secs", t);
 }
 
-void Matrix_Vector(double **A, double *x, double *b, int N)
+void Matrix_Vector(float **A, float *x, float *b, int N)
 {
 	int i, j;
-#pragma acc data copyin(A[0:N][0:N],x[0:N]) copyout(b[0:N])
+#pragma acc data copyin(A,x) copy(b)
 {
-//#pragma acc region
-//{
-//	#pragma acc loop independent vector(32)
-#pragma acc kernels loop present(b,A,x)
+#pragma acc kernels
 	for(i=0;i<N;i++)
 	{
 		b[i] = 0.0;
@@ -65,13 +62,13 @@ void Matrix_Vector(double **A, double *x, double *b, int N)
 }
 }
 
-void print_vector(double *x, int N)
+void print_vector(float *x, int N)
 {
 	int i;
 	for(i=0;i<N;i++) printf("x[%d] = %f \n", i, x[i]);
 }
 
-void print_matrix(double **A, int N)
+void print_matrix(float **A, int N)
 {
 	int i, j;
 	for(i=0;i<N;i++)
