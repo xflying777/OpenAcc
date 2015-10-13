@@ -16,10 +16,10 @@ int doTest(restrict float *a, restrict float *b, restrict float *c, int size)
 	#pragma acc loop independent
 		for (j = 0; j < size; ++j) 
 		{
-			a[i][j] = (float)i + j;
-			b[i][j] = (float)i - j;
-			c[i][j] = 0.0f;
-		}
+			a[i*size+j] = (float)i + j;
+			b[i*size+j] = (float)i - j;
+			c[i*size+j] = 0.0f;
+		}	
 	}
 	
 	// Compute matrix multiplication.
@@ -32,11 +32,11 @@ int doTest(restrict float *a, restrict float *b, restrict float *c, int size)
 	#pragma acc loop seq
 			for (k = 0; k < size; ++k) 
 			{
-				c[i][j] += a[i][k] * b[k][j];
+				c[i*size+j] += a[i*size+k] * b[k*size+j];
 			}
 		}
 	}
-	}
+}
 }
 	
 int main()
