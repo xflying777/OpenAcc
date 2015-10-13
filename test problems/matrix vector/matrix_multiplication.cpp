@@ -1,76 +1,106 @@
+/* matrix-acc-func.c */
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <time.h>
+#define SIZE 1000
 
-/* matrix-acc-check.c */
-#define SIZE 1500
- 
-int main()
+//void gpuTest(float *a, float *b, float *c, int size)
+void gpuTest(float *a, float *b, float *restrict c, int size)
 {
-	int i, j, k;
-	double t1, t2, gpu_time, cpu_time;
-	double **a, **b, **c, **seq;
-	
-	a = (double**) malloc(SIZE*sizeof(double*));
-	b = (double**) malloc(SIZE*sizeof(double*));
-	c = (double**) malloc(SIZE*sizeof(double*));
-	seq = (double**) malloc(SIZE*sizeof(double*));
-	a[0] = (double*) malloc(SIZE*SIZE*sizeof(double));
-	for(i = 1; i < SIZE; i++) a[i] = a[i-1] + SIZE;
-	b[0] = (double*) malloc(SIZE*SIZE*sizeof(double));
-	for(i = 1; i < SIZE; i++) b[i] = b[i-1] + SIZE;
-	c[0] = (double*) malloc(SIZE*SIZE*sizeof(double));
-	for(i = 1; i < SIZE; i++) c[i] = c[i-1] + SIZE;
-	seq[0] = (double*) malloc(SIZE*SIZE*sizeof(double));
-	for(i = 1; i < SIZE; i++) seq[i] = seq[i-1] + SIZE;
-	
-	// Initialize matrices.
-	for(i = 0; i < SIZE; ++i) 
+	int i,j,k;
+	// Compute matrix multiplication.
+	#pragma acc data copyin(a[0:size*size],b[0:size*size]) copy(c[0:size*size])
+	#pragma acc kernels
+	#pragma acc loop independent
+	for (i = 0; i < size; ++i) 
 	{
-		for (j = 0; j < SIZE; ++j) 
+	#pragma acc loop independent
+		for (j = 0; j < size; ++j) 
 		{
-			a[i][j] = (double)i + j;
-			b[i][j] = (double)i - j;
-			c[i][j] = 0.0;
+	#pragma acc loop seq
+			for (k = 0; k < size; ++k) 
+			{
+				c[i*size+j] += a[i*size+k] * b[k*size+j];
+			}
 		}
 	}
-	
-	t1 = clock(); 
+}
+
+void cpuTest(float *a, float *b, float *seq, int size)
+{
+	int i,j,k;
 	// Compute matrix multiplication.
-	#pragma acc kernels copyin(a,b) copy(c)
-	for (i = 0; i < SIZE; ++i) 
-		for (j = 0; j < SIZE; ++j) 
-			for (k = 0; k < SIZE; ++k) 
-				c[i][j] = c[i][j] + a[i][k] * b[k][j];
+	for (i = 0; i < size; ++i) 
+	{
+		for (j = 0; j < size; ++j) 
+		{
+			for (k = 0; k < size; ++k) 
+			{
+				seq[i*size+j] += a[i*size+k] * b[k*size+j];
+			}
+		}
+	}
+}
+	
+int main()
+{
+	int i, j;
+	int size = SIZE;
+	float t1, t2, gpu_times, cpu_times;
+	float *a = (float*)malloc(sizeof(float)*size*size);
+	float *b = (float*)malloc(sizeof(float)*size*size);
+	float *c = (float*)malloc(sizeof(float)*size*size);
+	
+	
+	// Initialize matrices.
+	#pragma acc kernels create(a[0:size*size], b[0:size*size], c[0:size*size])
+	{
+	#pragma acc loop independent
+	for (i = 0; i < size; ++i) 
+	{
+	#pragma acc loop independent
+		for (j = 0; j < size; ++j) 
+		{
+			a[i*size+j] = (float)i + j;
+			b[i*size+j] = (float)i - j;
+			c[i*size+j] = 0.0;
+		}	
+	}
+	}
+	
+	t1 = clock();
+	gpuTest(a, b, c, size);
 	t2 = clock();
-	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	gpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	printf("gpu times = %f \n", gpu_times);
+	
 	
 	// ****************
 	// double-check the OpenACC result sequentially on the host
 	// ****************
+	float *seq= (float*)malloc(sizeof(float)*size*size);
 	// Initialize the seq matrix
-	for(i = 0; i < SIZE; ++i) 
-		for(j = 0; j < SIZE; ++j) 
-			seq[i][j] = 0.0;
+	for(i = 0; i < size; ++i) 
+		for(j = 0; j < size; ++j) 
+			seq[i*SIZE+j] = 0.f;
 	
 	t1 = clock();
 	// Perform the multiplication
-	for (i = 0; i < SIZE; ++i) 
-		for (j = 0; j < SIZE; ++j) 
-			for (k = 0; k < SIZE; ++k) 
-				seq[i][j] = seq[i][j] + a[i][k] * b[k][j];
+	cpuTest(a, b, seq, size);
 	t2 = clock();
-	cpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	cpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	printf("cpu times = %f \n", cpu_times);
+	
 	
 	// check all the OpenACC matrices
-	for (i = 0; i < SIZE; ++i)
-		for (j = 0; j < SIZE; ++j)
-			if(c[i][j] != seq[i][j]) 
-				{
-					printf("Error %d %d\n", i,j);
-				}
+	for (i = 0; i < size; ++i)
+		for (j = 0; j < size; ++j)
+			if(c[i*size+j] != seq[i*size+j]) 
+			{
+				printf("Error (%d %d) (%g, %g)\n", i,j, c[i*size+j], seq[i*size+j]);
+				exit(1);
+			}
 	printf("OpenACC matrix multiplication test was successful!\n");
-	printf("gpu times = %f, cpu times = %f \n", gpu_time, cpu_time); 
+	printf("cpu times / gpu times = %f \n",cpu_times/gpu_times);
 	return 0;
 }
