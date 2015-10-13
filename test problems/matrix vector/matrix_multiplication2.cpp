@@ -2,13 +2,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define SIZE 1200
+#define SIZE 1000
 
-void gpuTest(float *a, float *b, float *c, int size)
-//void gpuTest(float *a, float *b, float *restrict c, int size)
+//void gpuTest(float *a, float *b, float *c, int size)
+void gpuTest(float *a, float *b, float *restrict c, int size)
 {
 	int i,j,k;
 	// Compute matrix multiplication.
+	#pragma acc data copyin(a[0:size*size],b[0:size*size]) copy(c[0:size*size])
+	#pragma acc kernels
 	#pragma acc loop independent
 	for (i = 0; i < size; ++i) 
 	{
@@ -51,7 +53,7 @@ int main()
 	
 	
 	// Initialize matrices.
-	#pragma acc kernels create(a[0:size*size], b[0:size*size]) copyout(c[0:size*size]) 
+	#pragma acc kernels create(a[0:size*size], b[0:size*size], c[0:size*size])
 	{
 	#pragma acc loop independent
 	for (i = 0; i < size; ++i) 
@@ -69,7 +71,8 @@ int main()
 	t1 = clock();
 	gpuTest(a, b, c, size);
 	t2 = clock();
-	printf("gpu times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+	gpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	printf("gpu times = %f \n", gpu_times);
 	
 	
 	// ****************
@@ -85,7 +88,8 @@ int main()
 	// Perform the multiplication
 	cpuTest(a, b, seq, size);
 	t2 = clock();
-	printf("cpu times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+	cpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	printf("cpu times = %f \n", cpu_times);
 	
 	
 	// check all the OpenACC matrices
@@ -96,10 +100,7 @@ int main()
 				printf("Error (%d %d) (%g, %g)\n", i,j, c[i*size+j], seq[i*size+j]);
 				exit(1);
 			}
-	free(c);
-	free(seq);
-	
 	printf("OpenACC matrix multiplication test was successful!\n");
-	
+	printf("cpu times / gpu times = %f \n",cpu_times/gpu_times);
 	return 0;
 }
