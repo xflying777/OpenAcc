@@ -52,6 +52,7 @@ void Matrix_Vector(float **A, float *x, float *b, int N)
 #pragma acc data copyin(A,x) copy(b)
 {
 #pragma acc kernels
+#pragma acc loop seq
 	for(i=0;i<N;i++)
 	{
 		b[i] = 0.0;

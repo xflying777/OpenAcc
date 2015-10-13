@@ -44,7 +44,7 @@ void cpuTest(float *a, float *b, float *seq, int size)
 	
 int main()
 {
-	int i, j, k;
+	int i, j;
 	int size = SIZE;
 	float t1, t2, gpu_times, cpu_times;
 	float *a = (float*)malloc(sizeof(float)*size*size);
