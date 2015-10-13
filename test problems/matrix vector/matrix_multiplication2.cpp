@@ -7,7 +7,7 @@ void doTest(float *restrict a, float *restrict b, float *restrict c, int size)
 {
 	int i,j,k;
 	
-	#pragma acc kernels deviceptr(a, b) copyout(c[0:size*size-1]) 
+	#pragma acc kernels create(a[0:size*size], b[0:size*size]) copyout(c[0:size*size]) 
 	{
 	// Initialize matrices.
 	#pragma acc loop independent
