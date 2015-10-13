@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #define SIZE 1000
  
-int doTest(restrict float *a, restrict float *b, restrict float *c, int size)
+int doTest(float *restrict a, float *restrict b, float *restrict c, int size)
 {
 	int i,j,k;
 	
