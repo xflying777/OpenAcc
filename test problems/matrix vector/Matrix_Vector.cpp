@@ -55,10 +55,8 @@ void Matrix_Vector(float **A, float *x, float *b, int N)
 	for(i=0;i<N;i++)
 	{
 		b[i] = 0.0;
-//		#pragma acc loop independent vector(32)
 		for(j=0;j<N;j++) b[i] = b[i] + A[i][j] * x[j];
 	}
-//}
 }
 }
 
