@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define SIZE 15000
+#define SIZE 10000
 
 void gpuTest(double *a, double *b, double *c, int size)
 //void gpuTest(double *a, double *b, double *restrict c, int size)
@@ -14,7 +14,7 @@ void gpuTest(double *a, double *b, double *c, int size)
 	#pragma acc loop independent
 	for (j = 0; j < size; ++j) 
 	{
-#pragma acc loop seq
+	#pragma acc loop seq
 		for (k = 0; k < size; ++k) 
 		{
 			c[j] += a[j*size+k] * b[k];
