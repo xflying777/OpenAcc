@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<!-- saved from url=(0105)http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script type="text/javascript" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/8c89158be8"></script><script src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/nr-768.min.js"></script><script src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/cb=gapi.loaded_1" async=""></script><script src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/cb=gapi.loaded_0" async=""></script><script type="text/javascript" async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/atrk.js"></script><script id="twitter-wjs" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/widgets.js"></script><script type="text/javascript" async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/plusone.js" gapi_processed="true"></script><script type="text/javascript" async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/inpage_linkid.js" id="undefined"></script><script id="facebook-jssdk" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/all.js"></script><script type="text/javascript" async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/ga.js"></script><script type="text/javascript">window.NREUM||(NREUM={});NREUM.info={"beacon":"bam.nr-data.net","errorBeacon":"bam.nr-data.net","licenseKey":"8c89158be8","applicationID":"2375507","transactionName":"IF1XEhQLXlQGQhlIDBBGSkkVDF1P","queueTime":0,"applicationTime":157,"ttGuid":"","agentToken":null,"agent":"js-agent.newrelic.com/nr-768.min.js"}</script>
+<script type="text/javascript">window.NREUM||(NREUM={}),__nr_require=function(e,n,t){function r(t){if(!n[t]){var o=n[t]={exports:{}};e[t][0].call(o.exports,function(n){var o=e[t][1][n];return r(o||n)},o,o.exports)}return n[t].exports}if("function"==typeof __nr_require)return __nr_require;for(var o=0;o<t.length;o++)r(t[o]);return r}({QJf3ax:[function(e,n){function t(e){function n(n,t,a){e&&e(n,t,a),a||(a={});for(var u=c(n),f=u.length,s=i(a,o,r),p=0;f>p;p++)u[p].apply(s,t);return s}function a(e,n){f[e]=c(e).concat(n)}function c(e){return f[e]||[]}function u(){return t(n)}var f={};return{on:a,emit:n,create:u,listeners:c,_events:f}}function r(){return{}}var o="nr@context",i=e("gos");n.exports=t()},{gos:"7eSDFh"}],ee:[function(e,n){n.exports=e("QJf3ax")},{}],3:[function(e,n){function t(e){return function(){r(e,[(new Date).getTime()].concat(i(arguments)))}}var r=e("handle"),o=e(1),i=e(2);"undefined"==typeof window.newrelic&&(newrelic=window.NREUM);var a=["setPageViewName","addPageAction","setCustomAttribute","finished","addToTrace","inlineHit","noticeError"];o(a,function(e,n){window.NREUM[n]=t("api-"+n)}),n.exports=window.NREUM},{1:12,2:13,handle:"D5DuLP"}],gos:[function(e,n){n.exports=e("7eSDFh")},{}],"7eSDFh":[function(e,n){function t(e,n,t){if(r.call(e,n))return e[n];var o=t();if(Object.defineProperty&&Object.keys)try{return Object.defineProperty(e,n,{value:o,writable:!0,enumerable:!1}),o}catch(i){}return e[n]=o,o}var r=Object.prototype.hasOwnProperty;n.exports=t},{}],D5DuLP:[function(e,n){function t(e,n,t){return r.listeners(e).length?r.emit(e,n,t):void(r.q&&(r.q[e]||(r.q[e]=[]),r.q[e].push(n)))}var r=e("ee").create();n.exports=t,t.ee=r,r.q={}},{ee:"QJf3ax"}],handle:[function(e,n){n.exports=e("D5DuLP")},{}],XL7HBI:[function(e,n){function t(e){var n=typeof e;return!e||"object"!==n&&"function"!==n?-1:e===window?0:i(e,o,function(){return r++})}var r=1,o="nr@id",i=e("gos");n.exports=t},{gos:"7eSDFh"}],id:[function(e,n){n.exports=e("XL7HBI")},{}],G9z0Bl:[function(e,n){function t(){var e=d.info=NREUM.info,n=f.getElementsByTagName("script")[0];if(e&&e.licenseKey&&e.applicationID&&n){c(p,function(n,t){n in e||(e[n]=t)});var t="https"===s.split(":")[0]||e.sslForHttp;d.proto=t?"https://":"http://",a("mark",["onload",i()]);var r=f.createElement("script");r.src=d.proto+e.agent,n.parentNode.insertBefore(r,n)}}function r(){"complete"===f.readyState&&o()}function o(){a("mark",["domContent",i()])}function i(){return(new Date).getTime()}var a=e("handle"),c=e(1),u=window,f=u.document;e(2);var s=(""+location).split("?")[0],p={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",agent:"js-agent.newrelic.com/nr-768.min.js"},d=n.exports={offset:i(),origin:s,features:{}};f.addEventListener?(f.addEventListener("DOMContentLoaded",o,!1),u.addEventListener("load",t,!1)):(f.attachEvent("onreadystatechange",r),u.attachEvent("onload",t)),a("mark",["firstbyte",i()])},{1:12,2:3,handle:"D5DuLP"}],loader:[function(e,n){n.exports=e("G9z0Bl")},{}],12:[function(e,n){function t(e,n){var t=[],o="",i=0;for(o in e)r.call(e,o)&&(t[i]=n(o,e[o]),i+=1);return t}var r=Object.prototype.hasOwnProperty;n.exports=t},{}],13:[function(e,n){function t(e,n,t){n||(n=0),"undefined"==typeof t&&(t=e?e.length:0);for(var r=-1,o=t-n||0,i=Array(0>o?0:o);++r<o;)i[r]=e[n+r];return i}n.exports=t},{}]},{},["G9z0Bl"]);</script>
+
+<title>專案整理與發佈-從Github到PyPI « dokelung's Blog</title>
+<meta content="  前言
+
+這篇心得講些什麼
+誰適合看這篇心得
+
+利用Github管理你的專案
+
+開啟一個新專案
+觀察repository狀態
+將檔案on stage
+提交檔案
+將repository上傳到遠端..." name="description">
+<meta content="專案整理與發佈-從Github到PyPI « dokelung&#39;s Blog" property="og:title">
+<meta content="  前言
+
+這篇心得講些什麼
+誰適合看這篇心得
+
+利用Github管理你的專案
+
+開啟一個新專案
+觀察repository狀態
+將檔案on stage
+提交檔案
+將repository上傳到遠端..." property="og:description">
+<meta content="http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi" property="og:url">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link href="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+<link href="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/css" rel="stylesheet" type="text/css">
+<meta name="robots" content="INDEX,FOLLOW">
+<link href="http://logdown.com/images/og_plain.jpg" rel="image_src">
+<link href="http://dokelung-blog.logdown.com/posts.rss" rel="alternate" title="dokelung&#39;s Blog" type="application/rss+xml">
+<link href="http://dokelung-blog.logdown.com/posts.atom" rel="alternate" title="dokelung&#39;s Blog" type="application/atom+xml">
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  var pluginUrl = '//www.google-analytics.com/plugins/ga/inpage_linkid.js';
+  _gaq.push(['_require', 'inpage_linkid', pluginUrl]);
+  
+  _gaq.push(['_setAccount', 'UA-41764280-1']);
+  _gaq.push(['_trackPageview']);
+  _gaq.push(['userblog._setAccount', 'UA-56219026-1']);
+  _gaq.push(['userblog._trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<script type="text/javascript" async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/embed.js"></script><script async="" type="text/javascript" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/count.js"></script><style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Hover_Arrow {position: absolute; width: 15px; height: 11px; cursor: pointer}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 5px 0px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 5px; -webkit-border-radius: 5px; -moz-border-radius: 5px; -khtml-border-radius: 5px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 1px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; color: #666666}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuRadioCheck {position: absolute; left: .7em}
+.MathJax_MenuLabel {padding: 1px 2em 3px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #DDDDDD; margin: 4px 3px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: #606872; color: white}
+.MathJax_Menu_Close {position: absolute; width: 31px; height: 31px; top: -15px; left: -15px}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><script type="text/javascript" charset="utf-8" async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/button.9594287b32ac4ed2228acac1d8fcd7c2.js"></script><script async="" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/count-data.js"></script><style type="text/css">.fb_hidden{position:absolute;top:-10000px;z-index:10001}.fb_reposition{overflow-x:hidden;position:relative}.fb_invisible{display:none}.fb_reset{background:none;border:0;border-spacing:0;color:#000;cursor:auto;direction:ltr;font-family:"lucida grande", tahoma, verdana, arial, sans-serif;font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;letter-spacing:normal;line-height:1;margin:0;overflow:visible;padding:0;text-align:left;text-decoration:none;text-indent:0;text-shadow:none;text-transform:none;visibility:visible;white-space:normal;word-spacing:normal}.fb_reset>div{overflow:hidden}.fb_link img{border:none}
+.fb_dialog{background:rgba(82, 82, 82, .7);position:absolute;top:-10000px;z-index:10001}.fb_reset .fb_dialog_legacy{overflow:visible}.fb_dialog_advanced{padding:10px;-moz-border-radius:8px;-webkit-border-radius:8px;border-radius:8px}.fb_dialog_content{background:#fff;color:#333}.fb_dialog_close_icon{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yq/r/IE9JII6Z1Ys.png) no-repeat scroll 0 0 transparent;_background-image:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yL/r/s816eWC-2sl.gif);cursor:pointer;display:block;height:15px;position:absolute;right:18px;top:17px;width:15px}.fb_dialog_mobile .fb_dialog_close_icon{top:5px;left:5px;right:auto}.fb_dialog_padding{background-color:transparent;position:absolute;width:1px;z-index:-1}.fb_dialog_close_icon:hover{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yq/r/IE9JII6Z1Ys.png) no-repeat scroll 0 -15px transparent;_background-image:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yL/r/s816eWC-2sl.gif)}.fb_dialog_close_icon:active{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yq/r/IE9JII6Z1Ys.png) no-repeat scroll 0 -30px transparent;_background-image:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yL/r/s816eWC-2sl.gif)}.fb_dialog_loader{background-color:#f6f7f8;border:1px solid #606060;font-size:24px;padding:20px}.fb_dialog_top_left,.fb_dialog_top_right,.fb_dialog_bottom_left,.fb_dialog_bottom_right{height:10px;width:10px;overflow:hidden;position:absolute}.fb_dialog_top_left{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/ye/r/8YeTNIlTZjm.png) no-repeat 0 0;left:-10px;top:-10px}.fb_dialog_top_right{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/ye/r/8YeTNIlTZjm.png) no-repeat 0 -10px;right:-10px;top:-10px}.fb_dialog_bottom_left{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/ye/r/8YeTNIlTZjm.png) no-repeat 0 -20px;bottom:-10px;left:-10px}.fb_dialog_bottom_right{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/ye/r/8YeTNIlTZjm.png) no-repeat 0 -30px;right:-10px;bottom:-10px}.fb_dialog_vert_left,.fb_dialog_vert_right,.fb_dialog_horiz_top,.fb_dialog_horiz_bottom{position:absolute;background:#525252;filter:alpha(opacity=70);opacity:.7}.fb_dialog_vert_left,.fb_dialog_vert_right{width:10px;height:100%}.fb_dialog_vert_left{margin-left:-10px}.fb_dialog_vert_right{right:0;margin-right:-10px}.fb_dialog_horiz_top,.fb_dialog_horiz_bottom{width:100%;height:10px}.fb_dialog_horiz_top{margin-top:-10px}.fb_dialog_horiz_bottom{bottom:0;margin-bottom:-10px}.fb_dialog_iframe{line-height:0}.fb_dialog_content .dialog_title{background:#6d84b4;border:1px solid #3a5795;color:#fff;font-size:14px;font-weight:bold;margin:0}.fb_dialog_content .dialog_title>span{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yd/r/Cou7n-nqK52.gif) no-repeat 5px 50%;float:left;padding:5px 0 7px 26px}body.fb_hidden{-webkit-transform:none;height:100%;margin:0;overflow:visible;position:absolute;top:-10000px;left:0;width:100%}.fb_dialog.fb_dialog_mobile.loading{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/ya/r/3rhSv5V8j3o.gif) white no-repeat 50% 50%;min-height:100%;min-width:100%;overflow:hidden;position:absolute;top:0;z-index:10001}.fb_dialog.fb_dialog_mobile.loading.centered{width:auto;height:auto;min-height:initial;min-width:initial;background:none}.fb_dialog.fb_dialog_mobile.loading.centered #fb_dialog_loader_spinner{width:100%}.fb_dialog.fb_dialog_mobile.loading.centered .fb_dialog_content{background:none}.loading.centered #fb_dialog_loader_close{color:#fff;display:block;padding-top:20px;clear:both;font-size:18px}#fb-root #fb_dialog_ipad_overlay{background:rgba(0, 0, 0, .45);position:absolute;left:0;top:0;width:100%;min-height:100%;z-index:10000}#fb-root #fb_dialog_ipad_overlay.hidden{display:none}.fb_dialog.fb_dialog_mobile.loading iframe{visibility:hidden}.fb_dialog_content .dialog_header{-webkit-box-shadow:white 0 1px 1px -1px inset;background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(#738ABA), to(#2C4987));border-bottom:1px solid;border-color:#1d4088;color:#fff;font:14px Helvetica, sans-serif;font-weight:bold;text-overflow:ellipsis;text-shadow:rgba(0, 30, 84, .296875) 0 -1px 0;vertical-align:middle;white-space:nowrap}.fb_dialog_content .dialog_header table{-webkit-font-smoothing:subpixel-antialiased;height:43px;width:100%}.fb_dialog_content .dialog_header td.header_left{font-size:12px;padding-left:5px;vertical-align:middle;width:60px}.fb_dialog_content .dialog_header td.header_right{font-size:12px;padding-right:5px;vertical-align:middle;width:60px}.fb_dialog_content .touchable_button{background:-webkit-gradient(linear, 0% 0%, 0% 100%, from(#4966A6), color-stop(.5, #355492), to(#2A4887));border:1px solid #2f477a;-webkit-background-clip:padding-box;-webkit-border-radius:3px;-webkit-box-shadow:rgba(0, 0, 0, .117188) 0 1px 1px inset, rgba(255, 255, 255, .167969) 0 1px 0;display:inline-block;margin-top:3px;max-width:85px;line-height:18px;padding:4px 12px;position:relative}.fb_dialog_content .dialog_header .touchable_button input{border:none;background:none;color:#fff;font:12px Helvetica, sans-serif;font-weight:bold;margin:2px -12px;padding:2px 6px 3px 6px;text-shadow:rgba(0, 30, 84, .296875) 0 -1px 0}.fb_dialog_content .dialog_header .header_center{color:#fff;font-size:16px;font-weight:bold;line-height:18px;text-align:center;vertical-align:middle}.fb_dialog_content .dialog_content{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/y9/r/jKEcVPZFk-2.gif) no-repeat 50% 50%;border:1px solid #555;border-bottom:0;border-top:0;height:150px}.fb_dialog_content .dialog_footer{background:#f6f7f8;border:1px solid #555;border-top-color:#ccc;height:40px}#fb_dialog_loader_close{float:left}.fb_dialog.fb_dialog_mobile .fb_dialog_close_button{text-shadow:rgba(0, 30, 84, .296875) 0 -1px 0}.fb_dialog.fb_dialog_mobile .fb_dialog_close_icon{visibility:hidden}#fb_dialog_loader_spinner{animation:rotateSpinner 1.2s linear infinite;background-color:transparent;background-image:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/yD/r/t-wz8gw1xG1.png);background-repeat:no-repeat;background-position:50% 50%;height:24px;width:24px}@keyframes rotateSpinner{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.fb_iframe_widget{display:inline-block;position:relative}.fb_iframe_widget span{display:inline-block;position:relative;text-align:justify}.fb_iframe_widget iframe{position:absolute}.fb_iframe_widget_fluid_desktop,.fb_iframe_widget_fluid_desktop span,.fb_iframe_widget_fluid_desktop iframe{max-width:100%}.fb_iframe_widget_fluid_desktop iframe{min-width:220px;position:relative}.fb_iframe_widget_lift{z-index:1}.fb_hide_iframes iframe{position:relative;left:-10000px}.fb_iframe_widget_loader{position:relative;display:inline-block}.fb_iframe_widget_fluid{display:inline}.fb_iframe_widget_fluid span{width:100%}.fb_iframe_widget_loader iframe{min-height:32px;z-index:2;zoom:1}.fb_iframe_widget_loader .FB_Loader{background:url(https://fbstatic-a.akamaihd.net/rsrc.php/v2/y9/r/jKEcVPZFk-2.gif) no-repeat;height:32px;width:32px;margin-left:-16px;position:absolute;left:50%;z-index:4}</style></head>
+<body class=" "><div id="MathJax_Message" style="display: none;"></div>
+
+  <div class="wrapper">
+    <header class="header"><div class="search">
+        <form accept-charset="UTF-8" action="http://dokelung-blog.logdown.com/posts/search" method="get">
+          <div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="✓"></div>
+         <input class="search-box" type="text" name="q" results="0" value="" placeholder="Search">
+</form>
+      </div>
+      <div class="logo">
+        <h1><a href="http://dokelung-blog.logdown.com/">dokelung's Blog</a></h1>
+        <span class="tagline">  </span>
+      </div>
+      <nav class="nav chrome-hack"><ul class="inline-list">
+<li>
+                <a href="http://dokelung-blog.logdown.com/pages/about-me" title="About Me">
+                  <i class="icon-file"></i>
+                  <span>About Me</span>
+                </a>
+              </li>
+            
+          
+          <li>
+            <a href="http://dokelung-blog.logdown.com/archives">
+              <i class="icon-archive"></i><span>Archive</span>
+            </a>
+         </li>
+          <li>
+            <a href="http://dokelung-blog.logdown.com/posts.atom" target="_blank">
+              <i class="icon-rss"></i><span>feeds</span>
+            </a>
+         </li>
+        </ul></nav></header><div class="content">
+
+      
+
+      
+
+      
+
+      
+
+
+
+
+      
+        <div class="post container">
+
+          <div class="rel-date" data-timestamp="1413448800"> 12 個月 ago </div>
+
+          <div class="title">
+            <h2>
+              <a href="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/專案整理與發佈-從Github到PyPI « dokelung's Blog.html">
+                
+                  專案整理與發佈-從Github到PyPI
+                
+
+                
+              </a>
+            </h2>
+          </div>
+
+          <div class="article">
+            
+
+
+            
+
+            
+              <hr>
+<ul>
+<li>  前言
+
+<ul>
+<li>這篇心得講些什麼</li>
+<li>誰適合看這篇心得</li>
+</ul>
+</li>
+<li>利用Github管理你的專案
+
+<ul>
+<li>開啟一個新專案</li>
+<li>觀察repository狀態</li>
+<li>將檔案on stage</li>
+<li>提交檔案</li>
+<li>將repository上傳到遠端</li>
+<li>建立可下載的專案包</li>
+<li>更新發佈</li>
+<li>複習</li>
+</ul>
+</li>
+<li>上傳套件到PyPI
+
+<ul>
+<li>設定setup.py</li>
+<li>設定setup.cfg</li>
+<li>建立.pypirc設定檔</li>
+<li>上傳到PyPI</li>
+<li>利用pip下載及安裝</li>
+<li>複習</li>
+</ul>
+</li>
+<li>結語</li>
+<li>參考資料</li>
+</ul>
+<hr>
+<h2>前言</h2>
+<p>說實在的從碩班開始就累積了一些專案，有些是為了研究寫的，有些是個人興趣的小作品，不過就一直放在Lab的server上面覺得有點可惜，前幾天想要把他們整理整理在對外發佈，但這不像是寫blog，打打字放放圖就好了，source code的下載，相關的說明文件，日後版本的更新都是一門學問，只好硬著頭皮好好的搞懂了一下Github和PyPI，本篇算是一個心得隨筆，記錄著這三天以來累積的心得。</p>
+<h3>這篇心得講些什麼</h3>
+<ol>
+<li>簡單的單人git技術(只是用到，不是教學)</li>
+<li>如何使用Github管理你的專案</li>
+<li>發佈一個可供人下載的專案包</li>
+<li>Python package的打包</li>
+<li>上傳到PyPI與使用pip下載</li>
+</ol>
+<h3>誰適合看這篇心得</h3>
+<ol>
+<li>對git略懂略懂的人</li>
+<li>專案用Python寫的朋友(不然後半段介紹發佈到PyPI的部份就派不上用場了XD)</li>
+<li>不過還是私心希望越多人看越好。</li>
+</ol>
+<p>廢話不多說，馬上來介紹流程。</p>
+<h2>利用Github管理你的專案</h2>
+<p>在開始之前，我預設各位都有個想要管理的專案，我給他一個代號：<code>MyProject</code>。<br>
+以下是他的目錄結構:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>MyProject-|--runner
+          |--pkgA---|--__init__.py
+          |         |--modA_1.py
+          |         |--modA_2.py
+          |--pkgB---|--__init__.py
+                    |--modB.py
+</pre></div>
+</figure><p>然後讀者們已經有了一個Github的帳號了，這邊我們用<code>dokelung</code>這個名稱。</p>
+<h3>開啟一個新專案</h3>
+<p>開啟的方法有兩種，一種是使用<code>git init</code>，另一種是直接在Github網站上面點選<code>New repository</code>，我們採用後者:</p>
+
+<ol>
+<li>輸入repository的名稱: MyProject</li>
+<li>輸入repository的敘述: an example</li>
+<li>勾選initialize this repository with a README</li>
+<li>按下<code>Create repository</code>。</li>
+</ol>
+<p>Github的repository其實有public和private的差別，但是private需要錢錢，所以我們不用。<br>
+但由於public的關係，我們放上去的專案都會變成open source的，這要特別注意。</p>
+
+<blockquote>
+<p>repository在Github中就是專案的意思。</p>
+</blockquote>
+
+<p>接著我們來看看MyProject的repository頁面，這個頁面的URL會長這樣:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>https://github.com/dokelung/MyProject
+</pre></div>
+</figure><p>我們可以看到在頁面中還有一個<code>HTTPS clone URL</code>，會以repository的名稱來命名:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>https://github.com/dokelung/MyProject.git
+</pre></div>
+</figure><p>這是個很重要的位址，只要有他，我們就能隨時透過網路來取得這個專案。</p>
+
+<p>接著我們在本地端，使用git來複製(clone)這個專案:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git clone https://github.com/dokelung/MyProject.git
+</pre></div>
+</figure><p>你會發現在當前目錄下多了一個以MyProject為名的目錄，還有一個說明檔<code>README.md</code>。<br>
+這個目錄不單單是個普通的目錄，還是一個已經使用git來管理的目錄。<br>
+不信可以用<code>git status</code>指令來確認:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git status
+On branch master
+Your branch is up-to-date with <span class="s1">'origin/master'</span>.
+
+nothing to commit, working directory clean
+</pre></div>
+</figure><p>我們稍微來解釋一下上面的動作：</p>
+
+<ol>
+<li> <code>git status</code>可以幫助我們知道目前專案中各個檔案更動與被追蹤的情形</li>
+<li> On branch master告訴我們現在的工作位於master這條分支上，</li>
+<li> nothing to commit, working directory clean告訴我們目前這個專案目錄是乾淨的，相較於上ㄧ次的commit是沒有更動的。</li>
+</ol>
+<h3>觀察repository狀態</h3>
+<p>接著我們將專案目錄下的所有檔案跟目錄都放到MyProject底下，現在在這個repository目錄底下的結構:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>MyProject-|--REDAME.md
+          |--runner
+          |--pkgA---|--__init__.py
+          |         |--modA_1.py
+          |         |--modA_2.py
+          |--pkgB---|--__init__.py
+                    |--modB.py
+</pre></div>
+</figure><p>然後運行<code>git status</code>:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git status
+On branch master
+Your branch is up-to-date with <span class="s1">'origin/master'</span>.
+
+Untracked files:
+  <span class="o">(</span>use <span class="s2">"git add &lt;file&gt;..."</span> to include <span class="k">in </span>what will be committed<span class="o">)</span>
+
+    這邊應該會列出所有你放進來的東西<span class="o">(</span>除了README.md<span class="o">)</span>
+
+nothing added to commit but untracked files present <span class="o">(</span>use <span class="s2">"git add"</span> to track<span class="o">)</span>
+</pre></div>
+</figure><p>事實上，每當repository中有檔案更動(包含新增、移入、刪除或修改等)，<code>git status</code>總是會指出更動的部份。<br>
+目前的更動是，git發現了一群沒看過的檔案。</p>
+<h3>將檔案on stage</h3>
+<p>若我們想要讓這些檔案被真正的納入repository中(現在只是在該目錄下，實際上還沒加入repository)，我們必須使用<code>git add</code>指令:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git add runner
+<span class="gp">$ </span>git status
+On branch master
+Your branch is up-to-date with <span class="s1">'origin/master'</span>.
+
+Changes to be committed:
+  <span class="o">(</span>use <span class="s2">"git reset HEAD &lt;file&gt;..."</span> to unstage<span class="o">)</span>
+
+    new file:   runner
+
+Untracked files:
+  <span class="o">(</span>use <span class="s2">"git add &lt;file&gt;..."</span> to include <span class="k">in </span>what will be committed<span class="o">)</span>
+
+    除了README.md和runner之外的所有東西
+</pre></div>
+</figure><p><code>git add</code>會將指定的檔案狀態成為stage，講簡單一點就是ready to commit的意思！<br>
+反之，unstage的檔案將不會被commit：有兩種狀況會產生unstage檔案:</p>
+
+<ol>
+<li>未被追蹤的檔案</li>
+<li>被追蹤但是被修改過而且尚未被add的檔案</li>
+</ol>
+<p>關於第二點，我們可以藉由修改一個原本onstage的檔案再用<code>git add</code>來觀察。<br>
+總之，利用<code>git status</code>可看的清清楚楚所有的狀態。<br>
+我們只要記住，所有需要被提交的檔案都要確定是stage狀態的。</p>
+
+<p>大家可以將專案裡面的檔案都<code>git add</code>進去囉。</p>
+
+<blockquote>
+<p>有個情況比較特別，當某個on stage的檔案被刪除後，若要加入這項刪除的資訊，請用git rm</p>
+</blockquote>
+<h3>提交檔案</h3>
+<p>使用<code>git commit</code>做提交。</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>$ git commit -m "first commit"
+</pre></div>
+</figure><p><code>"first commit"</code>是該次提交的註解。<br>
+所謂提交，就好像是一次存檔，我們可以任意的更動專案，並使用<code>git add</code>讓檔案on stage，調整出一個要存檔的狀態(stage狀態的檔案們就是要被存檔的檔案)，然後用<code>git commit</code>來進行真正的存檔。</p>
+
+<blockquote>
+<p>本篇不是git教學，就不贅述了XD</p>
+</blockquote>
+<h3>將repository上傳到遠端</h3>
+<p>光在本地端存檔還不夠，我們既然要用Github管理我們的專案，自然要將檔案提交到遠端囉，使用<code>git push</code>就好:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git push
+</pre></div>
+</figure><blockquote>
+<p>由於我們的repository是從Github建的，所以預設的遠端就是Github囉。另外，如果日後在遠端有任何修改，先用<code>git pull</code>將遠端merge回來，在<code>git push</code>推出去。</p>
+</blockquote>
+
+<p>到這邊，我們已經能夠在遠端好好管理我們的專案了，很棒吧。</p>
+<h3>建立可下載的專案包</h3>
+<p>首先，我們要對重要的commit(重要的存檔，也就是你想要發佈的那次存檔)製作一個標籤，使用<code>git tag</code>即可：</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git tag v1.0 -m <span class="s2">"first realease"</span>
+</pre></div>
+</figure><p>通常tag的名稱會是一個版本號，要不要使用v來標示版本都可以，-m後面跟著的一樣是該標籤之註解。<br>
+接著，我們將標籤推到遠端:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>git push --tags origin master
+</pre></div>
+</figure><p>如此一來，我們將可以獲得可供下載的專案包:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>https://github.com/dokelung/MyProject/tarball/v1.0
+</pre></div>
+</figure><p>或是在Github的頁面上也有相應的zip檔或tar.gz檔下載URL。</p>
+<h3>更新發佈</h3>
+<p>新手可能會有一個問題，當我們需要更新某個已發佈的專案包而不是建立一個新版本時，該怎麼做呢?<br>
+通常會想到的辦法是移除舊有的版本發佈，再重新建立一個，這讓過程很麻煩，因為你需要:</p>
+
+<ol>
+<li>刪除本地端tag</li>
+<li>刪除遠端tag</li>
+<li>建立本地端tag</li>
+<li>建立遠端tag</li>
+</ol>
+<blockquote>
+<p>上述動作是針對同一個版本的標籤，因為不同版本的標籤我們直接新建立就好，沒有刪除的問題。</p>
+</blockquote>
+
+<p>但是只要用<code>-f</code>選項就可以強制更新囉(下面假設v1.0標籤已經存在):</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>git tag v1.0 -f -m "update release"
+git push -f --tags origin master
+</pre></div>
+</figure><h3>複習</h3>
+<p>我們重點整理複習一下:</p>
+
+<ol>
+<li>整備本地專案</li>
+<li>上Github開新repository</li>
+<li>利用<code>HTTPS clone URL</code>和git clone將repository拉到本地</li>
+<li>將本地專案放入git repository在本地的目錄</li>
+<li>使用<code>git add</code>將所有檔案加入追蹤</li>
+<li>使用<code>git commit</code>將stage上的檔案進行提交</li>
+<li>使用<code>git push</code>將repository提交到遠端</li>
+</ol>
+<p>若該次commit想要發佈，則:</p>
+
+<ol>
+<li>使用<code>git tag</code>建立版本標籤</li>
+<li>使用<code>git push --tags</code>提交標籤至遠端</li>
+</ol>
+<p>若專案有檔案被修改，重複步驟5-7。<br>
+若同一版本的專案要重新發佈，使用<code>-f</code>選項。</p>
+<h2>上傳套件到PyPI</h2>
+<p>緊接著是第二個部分，若我們的專案是python package或是python script，如何利用PyPI將之散播到全世界。</p>
+<h3>設定setup.py</h3>
+<p>相信大家都知道，如果自己的python專案想要讓大家能夠安裝到python環境中，一定要撰寫<code>setup.py</code>，這邊針對還要上傳到PyPI，來客製化我們的setup.py，我們先來檢視一下目前的結構和等等我們要加入的幾個設定檔位置:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>MyProject-|--REDAME.md
+          |--setup.py  &lt;-- 加入setup.py
+          |--setup.cfg &lt;-- 加入setup.cfg
+          |--.pypirc   &lt;-- 加入.pypirc(注意，此檔不要加入stage提交出去！)
+          |--runner
+          |--pkgA---|--__init__.py
+          |         |--modA_1.py
+          |         |--modA_2.py
+          |--pkgB---|--__init__.py
+                    |--modB.py
+</pre></div>
+</figure><p>然後:</p>
+
+<figure class="figure-code code"><figcaption><span>setup.py
+</span></figcaption><div class="highlight"><pre><span class="kn">from</span> <span class="nn">distutils.core</span> <span class="kn">import</span> <span class="n">setup</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">'MyProject'</span><span class="p">,</span>
+    <span class="n">packages</span> <span class="o">=</span> <span class="p">[</span><span class="s">'pkgA'</span><span class="p">,</span> <span class="s">'pkgB'</span><span class="p">],</span>
+    <span class="n">scripts</span> <span class="o">=</span> <span class="p">[</span><span class="s">'runner'</span><span class="p">],</span>
+    <span class="n">version</span> <span class="o">=</span> <span class="s">'1.0'</span><span class="p">,</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s">'My first project'</span><span class="p">,</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="s">'dokelung'</span><span class="p">,</span>
+    <span class="n">author_email</span> <span class="o">=</span> <span class="s">'dokelung@gmail.com'</span><span class="p">,</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s">'https://github.com/dokelung/MyProject'</span><span class="p">,</span>
+    <span class="n">download_url</span> <span class="o">=</span> <span class="s">'https://github.com/dokelung/MyProject/tarball/v1.0'</span><span class="p">,</span>
+    <span class="n">keywords</span> <span class="o">=</span> <span class="p">[</span><span class="s">'Good Project'</span><span class="p">],</span>
+    <span class="n">classifiers</span> <span class="o">=</span> <span class="p">[],</span>
+<span class="p">)</span>
+</pre></div>
+</figure><p>以下針對各欄位進行說明:</p>
+
+<table>
+<thead><tr>
+<th>欄位名稱</th>
+<th>描述</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>name</td>
+<td>專案名稱</td>
+</tr>
+<tr>
+<td>packages</td>
+<td>要安裝的套件名稱</td>
+</tr>
+<tr>
+<td>scripts</td>
+<td>script名稱，通常代表一個執行檔，不一定有</td>
+</tr>
+<tr>
+<td>version</td>
+<td>版本</td>
+</tr>
+<tr>
+<td>description</td>
+<td>專案描述</td>
+</tr>
+<tr>
+<td>author</td>
+<td>作者</td>
+</tr>
+<tr>
+<td>author_email</td>
+<td>作者信箱</td>
+</tr>
+<tr>
+<td>url</td>
+<td>專案頁面，這邊我們填上Github的專案位址</td>
+</tr>
+<tr>
+<td>download_url</td>
+<td>下載路徑，還記得我們剛剛傳上標籤後得到的URL嗎？就是他</td>
+</tr>
+<tr>
+<td>keywords</td>
+<td>這個專案的一些關鍵字</td>
+</tr>
+</tbody>
+</table>
+<p>這邊稍微解釋一下scripts，這邊要寫在scripts裡的可能是整個專案的執行檔，用到了專案裡面的套件，為了要將該檔案同時也裝到使用者的系統上，我們需要把他也標註上去，否則後面我們利用pip安裝的時候就只會安裝package而不會安裝執行檔了。<br>
+而這邊所謂的安裝，其實也就是把指定的scripts放到一個可執行路徑裡，例如<code>/usr/bin/</code>中，如此使用者在安裝完後可在任何地方運行該script。</p>
+
+<p>有兩點要說明一下，第一個是我們能夠指定安裝的路徑，但如果只給script名稱，那他會被放在預設的位置。<br>
+第二點是，一定要注意script的名字不要跟他要匯入的pakcage同名了，這會導致一些import上的失誤。</p>
+
+<p>至此，已經擁有一個漂亮的安裝檔了(同時也能支援PyPI發佈)。</p>
+<h3>設定setup.cfg</h3>
+<p>因為我們的README.md是個markdown file，所以我們得新增一個<code>setup.cfg</code>的檔案:</p>
+
+<figure class="figure-code code"><div class="highlight"><pre>[metadata]
+description-file = README.md
+</pre></div>
+</figure><h3>建立.pypirc設定檔</h3>
+<p>唯有建立此設定檔才能讓我們傳東西到PyPI上面:</p>
+
+<figure class="figure-code code"><figcaption><span>.pypirc
+</span></figcaption><div class="highlight"><pre><span class="p">[</span><span class="n">distutils</span><span class="p">]</span>
+<span class="n">index</span><span class="o">-</span><span class="n">servers</span> <span class="o">=</span>
+    <span class="n">pypi</span> 
+
+<span class="p">[</span><span class="n">pypi</span><span class="p">]</span> 
+<span class="n">repository</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pypi</span><span class="o">.</span><span class="n">python</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">pypi</span>
+<span class="n">username</span><span class="p">:</span> <span class="n">dokelung</span>
+<span class="n">password</span><span class="p">:</span> <span class="err">寫自己的吧，我才不會告訴你我的咧！</span>
+</pre></div>
+</figure><p>再次提醒大家，既然裡面有密碼明碼，大家千萬不要把它給commit出去。</p>
+<h3>上傳到PyPI</h3>
+<p>終於到了最後一個階段，首先註冊:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>python setup.py register -r pypi
+</pre></div>
+</figure><p>接著上傳:</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>python setup.py sdist upload -r pypi
+</pre></div>
+</figure><p>太好了，你成功的讓全世界都能看到你的作品了，上PyPI看看你的package頁面吧。</p>
+<h3>利用pip下載及安裝</h3>
+<p>這應該是過程中最讓人開心的部分了，我們可以嘗到甜美的果實，利用</p>
+
+<figure class="figure-code code"><figcaption><span>
+</span></figcaption><div class="highlight"><pre><span class="gp">$ </span>pip install MyProject
+</pre></div>
+</figure><p>我們可以在任何有裝pip的電腦中下載及安裝我們的專案，很酷吧！<br>
+而如果日後我們的專案有任何修改，除了上一大節提到的重新提交或發佈外，如果要在PyPI上面進行更新，一定要重新上傳過喔。</p>
+<h3>複習</h3>
+<p>又到了複習的時間囉，我們來看看後半段怎麼做的:</p>
+
+<ol>
+<li>撰寫setup.py</li>
+<li>撰寫setup.cfg如果README是markdown file</li>
+<li>撰寫.pypirc</li>
+<li>用<code>python setup.py register</code>註冊</li>
+<li>用<code>python setup.py sdist upload</code>上傳</li>
+</ol>
+<p>若有任何更動，請先整理Github再修改setup.py的內容(如更新版本號或是加入新套件或更正URL)重複4-5。</p>
+<h2>結語</h2>
+<p>原本想要寫個簡明的流程，沒想到比我想的篇幅還要大，我想我應該有點完美主義者的傾向XDD<br>
+再者，由於這篇心得不是git的教學，所以有許多部分沒有細講，建議大家去瀏覽一下相關的教學，有個滿推薦的blog大家可以在參考資料的地方看到。</p>
+<h2>參考資料</h2>
+<ul>
+<li><a href="http://peterdowns.com/posts/first-time-with-pypi.html">How to submit a package to PyPI</a></li>
+</ul>
+<p>推薦的git教學</p>
+
+<ul>
+<li><a href="http://blog.gogojimmy.net/2012/01/17/how-to-use-git-1-git-basic/">好麻煩部落格</a></li>
+</ul>
+<div class="article-navigation">
+                
+                  <a href="http://dokelung-blog.logdown.com/posts/236467-python-teaching-slides" class="article-prev">
+                    ← Python教學投影片
+                  </a>
+                
+
+                
+                  <a href="http://dokelung-blog.logdown.com/posts/258710-school-supplement" class="article-next">
+                    一校補充 →
+                  </a>
+                
+              </div>
+
+              <div class="social-share group">
+                <div class="pull-right">
+                  
+                  <div class="fb-like fb_iframe_widget" data-href="http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi" data-layout="button_count" data-send="false" data-show-faces="false" data-width="90" fb-xfbml-state="rendered" fb-iframe-plugin-query="app_id=146125455579724&amp;container_width=0&amp;href=http%3A%2F%2Fdokelung-blog.logdown.com%2Fposts%2F238050-collation-and-publishing-of-the-project-from-github-to-pypi&amp;layout=button_count&amp;locale=en_US&amp;sdk=joey&amp;send=false&amp;show_faces=false&amp;width=90"><span style="vertical-align: bottom; width: 79px; height: 20px;"><iframe name="f8b0cdc58" width="90px" height="1000px" frameborder="0" allowtransparency="true" allowfullscreen="true" scrolling="no" title="fb:like Facebook Social Plugin" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/like.html" style="border: none; visibility: visible; width: 79px; height: 20px;" class=""></iframe></span></div>
+                  
+                </div>
+
+                <a href="http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi#" style="dispaly:none; border-bottom:none;">&nbsp;</a>
+
+
+                
+                  <iframe id="twitter-widget-0" scrolling="no" frameborder="0" allowtransparency="true" class="twitter-share-button twitter-share-button-rendered twitter-tweet-button" title="Twitter Tweet Button" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/tweet_button.acd25e6d83d3bc35d5d31d08f52ef7ab.en.html" style="position: static; visibility: visible; width: 80px; height: 20px;"></iframe>
+                
+
+                
+                   <div id="___plusone_0" style="text-indent: 0px; margin: 0px; padding: 0px; border-style: none; float: none; line-height: normal; font-size: 1px; vertical-align: baseline; display: inline-block; width: 90px; height: 20px; background: transparent;"><iframe frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" style="position: static; top: 0px; width: 90px; margin: 0px; border-style: none; left: 0px; visibility: visible; height: 20px;" tabindex="0" vspace="0" width="100%" id="I0_1444793335989" name="I0_1444793335989" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/fastbutton.html" data-gapiattached="true" title="+1"></iframe></div>
+                
+
+              </div>
+            
+
+          </div>
+
+          
+
+          <div class="metadata">
+            <ul class="inline-list">
+<li>
+<i class="icon-time"></i> October 16, 2014 16:40 </li>
+              <li>
+<i class="icon-link"></i> <a href="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/專案整理與發佈-從Github到PyPI « dokelung's Blog.html"> Permalink </a> </li>
+              
+              <li> <i class="icon-comment"></i> <a href="http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi#disqus_thread">0 Comments</a>
+</li>
+              
+
+             </ul>
+</div>
+
+          <div style="clear: both;">&nbsp;</div>
+
+          
+            
+                    <div id="disqus_thread"><iframe id="dsq-app1" name="dsq-app1" allowtransparency="true" frameborder="0" scrolling="no" tabindex="0" title="Disqus" width="100%" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/saved_resource.html" style="width: 100% !important; border: none !important; overflow: hidden !important; height: 593px !important;" horizontalscrolling="no" verticalscrolling="no"></iframe></div>
+      <script type="text/javascript">
+      /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = 'httpdokelungbloglogdowncom'; // required: replace example with your forum shortname
+        var disqus_identifier = 'http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi';
+        var disqus_url = 'http://dokelung-blog.logdown.com/posts/238050-collation-and-publishing-of-the-project-from-github-to-pypi';
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+      </script><noscript>Please enable JavaScript to view the &lt;a href="http://disqus.com/?ref_noscript"&gt;comments powered by Disqus.&lt;/a&gt;
+</noscript>
+      
+
+            
+          
+
+
+        </div>
+      
+
+      
+
+
+      
+
+    </div>
+
+    <footer class="footer"><p>
+        <span><i></i>Copyright © 2013 dokelung . </span>  Powered by <a href="http://logdown.com/">Logdown</a>.<br> Based on work at subtlepatterns.com.
+      </p>
+    </footer>
+</div>
+
+  <script src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/logdown_blog.js"></script><script>
+    if (window.chrome) {
+      document.querySelector('.header .nav').classList.add('chrome-hack');
+    }
+  </script><iframe src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/top_controls.html" width="81" height="26" frameborder="0" scrolling="no" style="position: fixed; z-index: 2147483647; border: 0px; background-color: transparent; overflow: hidden; top: 0px; right: 0px;"></iframe>
+
+
+
+
+<div id="fb-root" class=" fb_reset"><div style="position: absolute; top: -10000px; height: 0px; width: 0px;"><div><iframe name="fb_xdm_frame_http" frameborder="0" allowtransparency="true" allowfullscreen="true" scrolling="no" title="Facebook Cross Domain Communication Frame" aria-hidden="true" tabindex="-1" id="fb_xdm_frame_http" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/jb3BUxkAISL.html" style="border: none;"></iframe><iframe name="fb_xdm_frame_https" frameborder="0" allowtransparency="true" allowfullscreen="true" scrolling="no" title="Facebook Cross Domain Communication Frame" aria-hidden="true" tabindex="-1" id="fb_xdm_frame_https" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/jb3BUxkAISL(1).html" style="border: none;"></iframe></div></div><div style="position: absolute; top: -10000px; height: 0px; width: 0px;"><div></div></div></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1&appId=146125455579724";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script><script type="text/x-mathjax-config;executed=true">
+   MathJax.Hub.Config({
+    extensions: ["jsMath2jax.js"]
+  });
+</script><script src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/MathJax.js"></script><script type="text/javascript">
+  (function() {
+    var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+    po.src = 'https://apis.google.com/js/plusone.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+  })();
+</script><script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script><script type="text/javascript">
+/* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+disqus_shortname = 'httpdokelungbloglogdowncom'; // required: replace example with your forum shortname
+
+/* * * DON'T EDIT BELOW THIS LINE * * */
+(function () {
+var s = document.createElement('script'); s.async = true;
+s.type = 'text/javascript';
+s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
+(document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
+}());
+</script><!-- Start Alexa Certify Javascript --><script type="text/javascript">
+_atrk_opts = { atrk_acct:"KOI0g1aYS500G0", domain:"logdown.com",dynamic: true};
+(function() { var as = document.createElement('script'); as.type = 'text/javascript'; as.async = true; as.src = "https://d31qbv1cthcecs.cloudfront.net/atrk.js"; var s = document.getElementsByTagName('script')[0];s.parentNode.insertBefore(as, s); })();
+</script><noscript>&lt;img src="https://d5nxst8fruw4z.cloudfront.net/atrk.gif?account=KOI0g1aYS500G0" style="display:none" height="1" width="1" alt=""&gt;</noscript>
+<!-- End Alexa Certify Javascript -->
+
+
+<iframe name="oauth2relay495597276" id="oauth2relay495597276" src="./專案整理與發佈-從Github到PyPI « dokelung's Blog_files/postmessageRelay.html" tabindex="-1" style="width: 1px; height: 1px; position: absolute; top: -100px;"></iframe></body></html>
