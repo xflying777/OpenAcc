@@ -3,17 +3,17 @@
 #include <math.h>
 #include <time.h>
 
-void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N);
-void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N);
-void error(double *y_r, double *y_i, double *z_r, double *z_i, int N);
-void Initial(double *x, double *y, int N);
-void Print_Complex_Vector(double *y_r, double *y_i, int N);
+void cpuFFTr2(float *x_r, float *x_i, float *y_r, float *y_i, int N);
+void gpuFFTr2(float *x_r, float *x_i, float *y_r, float *y_i, int N);
+void error(float *y_r, float *y_i, float *z_r, float *z_i, int N);
+void Initial(float *x, float *y, int N);
+void Print_Complex_Vector(float *y_r, float *y_i, int N);
 int Generate_N(int p);
 
 int main()
 {
-	int k, n, p, N;
-	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, w_r, w_i, cpu_times, gpu_times;
+	int p, N;
+	float *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
 	
 	printf("Please input N = 2^p, p = ");
@@ -21,12 +21,12 @@ int main()
 	N = Generate_N(p);
 	printf("N = 2^%d = %d \n", p, N);
 	
-	x_r = (double *) malloc(N*sizeof(double));
-	x_i = (double *) malloc(N*sizeof(double));
-	y_r = (double *) malloc(N*sizeof(double));
-	y_i = (double *) malloc(N*sizeof(double));
-	z_r = (double *) malloc(N*sizeof(double));
-	z_i = (double *) malloc(N*sizeof(double));
+	x_r = (float *) malloc(N*sizeof(float));
+	x_i = (float *) malloc(N*sizeof(float));
+	y_r = (float *) malloc(N*sizeof(float));
+	y_i = (float *) malloc(N*sizeof(float));
+	z_r = (float *) malloc(N*sizeof(float));
+	z_i = (float *) malloc(N*sizeof(float));
 	
 	Initial(x_r, x_i, N);
 	
@@ -40,14 +40,14 @@ int main()
 	t2 = clock();
 	gpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;	
 	
-	error(y_r, y_i, z_r, z_i, N);
 	printf("cpu times = %f \n gpu_times = %f \n cpu times / gpu times = %f \n", cpu_times, gpu_times, cpu_times/gpu_times);
+	error(y_r, y_i, z_r, z_i, N);
 //	Print_Complex_Vector(y_r, y_i, N);
 	
 	return 0;
 } 
 
-void Initial(double *x, double *y, int N)
+void Initial(float *x, float *y, int N)
 {
 	int n;
 	for(n=0;n<N;++n)
@@ -57,7 +57,7 @@ void Initial(double *x, double *y, int N)
 	}
 }
 
-void Print_Complex_Vector(double *y_r, double *y_i, int N)
+void Print_Complex_Vector(float *y_r, float *y_i, int N)
 {
 	int n;
 	for(n=0;n<N;++n)
@@ -74,9 +74,9 @@ int Generate_N(int p)
 	return N;
 }
 
-void error(double *y_r, double *y_i, double *z_r, double *z_i, int N)
+void error(float *y_r, float *y_i, float *z_r, float *z_i, int N)
 {
-	int i, j;
+	int i;
 	for(i=0;i<N;i++)
 	{
 		if(y_r[i] != z_r[i] | y_i[i] != z_i[i])
@@ -89,12 +89,12 @@ void error(double *y_r, double *y_i, double *z_r, double *z_i, int N)
 		
 }
 
-void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
+void cpuFFTr2(float *x_r, float *x_i, float *y_r, float *y_i, int N)
 {
 	// input : x = x_r + i * x_i
 	// output: y = y_r + i * y_i
 	int k, n, i, j, M;
-	double t_r, t_i;
+	float t_r, t_i;
 	
 	for(n=0;n<N;++n)
 	{
@@ -122,7 +122,7 @@ void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		i = i + 1;
 	}
 	// Butterfly structure
-	double theta, w_r, w_i;
+	float theta, w_r, w_i;
 	n = 2;
 	while(n <= N)
 	{
@@ -151,23 +151,23 @@ void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 }
 
 
-void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
+void gpuFFTr2(float *x_r, float *x_i, float *restrict y_r, float *restrict y_i, int N)
 {
 	// input : x = x_r + i * x_i
 	// output: y = y_r + i * y_i
 	int k, n, i, j, M;
-	double t_r, t_i;
+	float t_r, t_i;
 	
 	#pragma acc data copyin(x_r[0:N], x_i[0:N]) copy(y_r[0:N], y_i[0:N])
-	#pragma acc loop independent
+	#pragma acc parallel loop independent
 	for(n=0;n<N;++n)
 	{
 		y_r[n] = x_r[n];
 		y_i[n] = x_i[n];
 	}
-	
-	i = j = 0;
+
 	#pragma acc kernels
+	i = j = 0;
 	while(i < N)
 	{
 		if(i < j)
@@ -186,10 +186,11 @@ void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		j = j + M;		
 		i = i + 1;
 	}
-	// Butterfly structure
-	double theta, w_r, w_i;
-	n = 2;
+	
 	#pragma acc kernels
+	// Butterfly structure
+	float theta, w_r, w_i;
+	n = 2;
 	while(n <= N)
 	{
 		for(k=0;k<n/2;k++)
@@ -213,6 +214,5 @@ void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		}
 		n = n * 2;
 	}
-	
 }
 
