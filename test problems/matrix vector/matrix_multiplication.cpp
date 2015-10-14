@@ -46,7 +46,8 @@ int main()
 {
 	int i, j;
 	int size = SIZE;
-	float t1, t2, gpu_times, cpu_times;
+	float gpu_times, cpu_times;
+	clock_t t1, t2;
 	float *a = (float*)malloc(sizeof(float)*size*size);
 	float *b = (float*)malloc(sizeof(float)*size*size);
 	float *c = (float*)malloc(sizeof(float)*size*size);
