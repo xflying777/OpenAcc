@@ -12,7 +12,7 @@ void Print_Complex_Vector(double *y_r, double *y_i, int N);
 
 int main()
 {
-	int i, n, p, N;
+	int p, N;
 	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
 	
@@ -90,7 +90,7 @@ void error(double *y_r, double *y_i, double *z_r, double *z_i, int N)
 
 void cpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 {
-	int k, n, i, j, M;
+	int n, i, j, M;
 	double t_r;
 	
 	for(n=0;n<N;++n)
@@ -121,10 +121,10 @@ void cpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 
 void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 {
-	int k, n, i, j, M;
+	int n, i, j, M;
 	double t_r;
 	
-	#pragma acc data copyin(x_r[0:N], x_i[0:N])
+	#pragma acc data copyin(x_r[0:N], x_i[0:N]) copy(y_r[0:N], y_i[0:N])
 	#pragma acc parallel loop independent
 	for(n=0;n<N;++n)
 	{
@@ -135,7 +135,7 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 	#pragma acc kernels
 	i = j = 0;
 	for(i=0;i<N;i++)
-	{
+	{	
 		if(i < j)
 		{
 			// swap y[i], y[j]
@@ -144,12 +144,15 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 			y_r[j] = t_r;
 		}
 		M = N/2;
+		#pragma acc loop seq
+		{
 		while(j >= M & M > 0)
 		{
 			j = j - M;
 			M = M / 2;
 		}
-		j = j + M;		
+		j = j + M;
+		}
 	}
 }
 
