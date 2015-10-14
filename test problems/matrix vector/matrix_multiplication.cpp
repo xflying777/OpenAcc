@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define SIZE 2000
+#define SIZE 1500
 
 //void gpuTest(double *a, double *b, double *c, int size)
 void gpuTest(double *a, double *b, double *restrict c, int size)

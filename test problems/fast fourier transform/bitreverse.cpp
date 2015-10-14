@@ -135,7 +135,6 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 	
 	#pragma acc kernels
 	i = j = 0;
-	#pragma acc loop independent
 	for(i=0;i<N;i++)
 	{	
 		if(i < j)
@@ -146,15 +145,12 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 			y_r[j] = t_r;
 		}
 		M = N/2;
-		#pragma acc loop seq
-		{
 		while(j >= M & M > 0)
 		{
 			j = j - M;
 			M = M / 2;
 		}
 		j = j + M;
-		}
 	}
 }
 
