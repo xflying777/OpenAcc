@@ -2,42 +2,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define SIZE 1000
+#define SIZE 20000
 
-//void gpuTest(double *a, double *b, double *c, int size)
-void gpuTest(double *a, double *b, double *restrict c, int size)
+void gpuTest(double *a, double *b, double *c, int size)
+//void gpuTest(double *a, double *b, double *restrict c, int size)
 {
-	int i,j,k;
+	int j, k;
 	// Compute matrix multiplication.
 	#pragma acc data copyin(a[0:size*size],b[0:size*size]) copy(c[0:size*size])
 	#pragma acc kernels
 	#pragma acc loop independent
-	for (i = 0; i < size; ++i) 
+	for (j = 0; j < size; ++j) 
 	{
-	#pragma acc loop independent
-		for (j = 0; j < size; ++j) 
+#pragma acc loop seq
+		for (k = 0; k < size; ++k) 
 		{
-	#pragma acc loop seq
-			for (k = 0; k < size; ++k) 
-			{
-				c[i*size+j] += a[i*size+k] * b[k*size+j];
-			}
+			c[j] += a[j*size+k] * b[k];
 		}
 	}
 }
 
 void cpuTest(double *a, double *b, double *seq, int size)
 {
-	int i,j,k;
+	int j, k;
 	// Compute matrix multiplication.
-	for (i = 0; i < size; ++i) 
+	for (j = 0; j < size; ++j) 
 	{
-		for (j = 0; j < size; ++j) 
+		for (k = 0; k < size; ++k) 
 		{
-			for (k = 0; k < size; ++k) 
-			{
-				seq[i*size+j] += a[i*size+k] * b[k*size+j];
-			}
+			seq[j] += a[j*size+k] * b[k];
 		}
 	}
 }
@@ -49,8 +42,8 @@ int main()
 	double gpu_times, cpu_times;
 	clock_t t1, t2;
 	double *a = (double*)malloc(sizeof(double)*size*size);
-	double *b = (double*)malloc(sizeof(double)*size*size);
-	double *c = (double*)malloc(sizeof(double)*size*size);
+	double *b = (double*)malloc(sizeof(double)*size);
+	double *c = (double*)malloc(sizeof(double)*size);
 	
 	
 	// Initialize matrices.
@@ -59,12 +52,13 @@ int main()
 	#pragma acc loop independent
 	for (i = 0; i < size; ++i) 
 	{
+		b[i] = (double)i;
+		c[i] = 0.0;
 	#pragma acc loop independent
 		for (j = 0; j < size; ++j) 
 		{
 			a[i*size+j] = (double)i + j;
-			b[i*size+j] = (double)i - j;
-			c[i*size+j] = 0.0;
+
 		}	
 	}
 	}
@@ -79,11 +73,9 @@ int main()
 	// ****************
 	// double-check the OpenACC result sequentially on the host
 	// ****************
-	double *seq= (double*)malloc(sizeof(double)*size*size);
+	double *seq= (double*)malloc(sizeof(double)*size);
 	// Initialize the seq matrix
-	for(i = 0; i < size; ++i) 
-		for(j = 0; j < size; ++j) 
-			seq[i*SIZE+j] = 0.f;
+	for(i = 0; i < size; ++i) seq[i] = 0.0;
 	
 	t1 = clock();
 	// Perform the multiplication
@@ -95,13 +87,12 @@ int main()
 	
 	// check all the OpenACC matrices
 	for (i = 0; i < size; ++i)
-		for (j = 0; j < size; ++j)
-			if(c[i*size+j] != seq[i*size+j]) 
-			{
-				printf("Error (%d %d) (%g, %g)\n", i,j, c[i*size+j], seq[i*size+j]);
-				exit(1);
-			}
-	printf("OpenACC matrix multiplication test was successful!\n");
+		if(c[i] != seq[i]) 
+		{
+			printf("Error (%d %d) (%g, %g)\n", i,j, c[i*size+j], seq[i*size+j]);
+			exit(1);
+		}
+	printf("OpenACC matrix vector test was successful!\n");
 	printf("cpu times / gpu times = %f \n",cpu_times/gpu_times);
 	return 0;
 }
