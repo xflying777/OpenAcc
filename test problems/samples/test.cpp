@@ -3,17 +3,17 @@
 #include <math.h>
 #include <time.h>
 
-void cputest1(int N, float *p);
-void gputest1(int N, float *p);
+void cputest1(int N, double *p);
+void gputest1(int N, double *p);
 
 int main()
 {
 	int N;
-	float cpu_t1, gpu_t1, *p, *q;
+	double cpu_t1, gpu_t1, *p, *q;
 	clock_t t1, t2;
 	
-	p = (float*) malloc(1*sizeof(float));
-	q = (float*) malloc(1*sizeof(float));
+	p = (double*) malloc(1*sizeof(double));
+	q = (double*) malloc(1*sizeof(double));
 	
 	printf("Input N = ");
 	scanf("%d",&N);
@@ -38,7 +38,7 @@ int main()
 	return 0;
 }
 
-void cputest1(int N, float *p)
+void cputest1(int N, double *p)
 {
 	int i;
 	for(i=0;i<N;i++)
@@ -47,16 +47,13 @@ void cputest1(int N, float *p)
 	}
 }
 
-void gputest1(int N, float *q)
+void gputest1(int N, double *q)
 {
 	int i;
-	float *a;
-	a = (float*) malloc(1*sizeof(float));
 	#pragma acc kernels
 	for(i=0;i<N;i++)
 	{
-		*a = *a + 1;
+		*q = *q + 1;
 	}
-	*q = *a;
 }
 
