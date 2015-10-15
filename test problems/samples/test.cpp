@@ -12,6 +12,9 @@ int main()
 	double cpu_t1, gpu_t1, *p, *q;
 	clock_t t1, t2;
 	
+	p = (double*) malloc(1*sizeof(double));
+	q = (double*) malloc(1*sizeof(double));
+	
 	printf("Input N = ");
 	scanf("%d",&N);
 	
@@ -21,9 +24,9 @@ int main()
 	t2 = clock();
 	cpu_t1 = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
-        t1 = clock();
-        gputest1(N, q);
-        t2 = clock();
+    t1 = clock();
+    gputest1(N, q);
+    t2 = clock();
 	gpu_t1 = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
 	printf("test1 cpu times = %f \n", cpu_t1);
@@ -44,11 +47,11 @@ void cputest1(int N, double *p)
 
 void gputest1(int N, double *p)
 {
-        int i;
-        *p = 1.0;
+    int i;
+    *p = 1.0;
 	#pragma acc kernels
-        for(i=0;i<N;i++)
-        {
-                *p = *p + 1;
-        }
+    for(i=0;i<N;i++)
+    {
+            *p = *p + 1;
+    }
 }
