@@ -129,13 +129,12 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		y_i[n] = x_i[n];
 	}
 	
-	#pragma acc data copy(temp[0:N])
 	#pragma acc kernels
 	n = 1;
-	#pragma acc loop independent
+//	#pragma acc loop seq
 	for(M=N/2;M>0;M=M/2)
 	{
-	#pragma acc loop seq
+//	#pragma acc loop independent
 		for(i=n;i<2*n;i++)
 		{
 			temp[i] = temp[i-n] + M; 

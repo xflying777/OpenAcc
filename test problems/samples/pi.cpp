@@ -10,8 +10,9 @@ int main()
 	double pi, temp, t1, t2, *t, everage;
 	m = 20;
 	t = (double*) malloc(m*sizeof(double));
-	n = 100000000;
+	n = 10000000;
 	
+//	#pragma acc kernels
 	for(k=0;k<m;k++)
 	{
 		pi = 0.0;
