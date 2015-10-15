@@ -50,10 +50,13 @@ void cputest1(int N, float *p)
 void gputest1(int N, float *q)
 {
 	int i;
-	#pragma acc data copyout(q[0:1])
-	#pragma acc kernels 
+	float *a;
+	a = (float*) malloc(1*sizeof(float));
+	#pragma acc kernels
 	for(i=0;i<N;i++)
 	{
-		*q = *q + 1;
+		*a = *a + 1;
 	}
+	*q = *a;
 }
+
