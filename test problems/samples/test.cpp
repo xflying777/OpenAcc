@@ -50,7 +50,10 @@ void cputest1(int N, double *p)
 void gputest1(int N, double *q)
 {
 	int i;
-	#pragma acc kernels
+	#pragma acc data copy(q[0:1])
+	#pragma acc parallel loop seq
+//	#pragma acc kernels
+//	#pragma acc loop seq
 	for(i=0;i<N;i++)
 	{
 		*q = *q + 1;
