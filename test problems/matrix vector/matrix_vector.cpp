@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define SIZE 10000
+
+//#define SIZE 10000
 
 //void gpuTest(double *a, double *b, double *c, int size)
 void gpuTest(double *a, double *b, double *restrict c, int size)
@@ -37,15 +38,19 @@ void cpuTest(double *a, double *b, double *seq, int size)
 	
 int main()
 {
-	int i, j;
-	int size = SIZE;
+	int i, j, N;
+	int size;
 	double gpu_times, cpu_times;
 	clock_t t1, t2;
+
+        printf("Input N = ");
+        scanf("%d",&N);
+        size = N;
+
 	double *a = (double*)malloc(sizeof(double)*size*size);
 	double *b = (double*)malloc(sizeof(double)*size);
 	double *c = (double*)malloc(sizeof(double)*size);
-	
-	
+
 	// Initialize matrices.
 	#pragma acc kernels create(a[0:size*size], b[0:size], c[0:size])
 	{

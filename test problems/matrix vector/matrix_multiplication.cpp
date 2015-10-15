@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define SIZE 1500
+//#define SIZE 1500
 
 //void gpuTest(double *a, double *b, double *c, int size)
 void gpuTest(double *a, double *b, double *restrict c, int size)
@@ -44,10 +44,13 @@ void cpuTest(double *a, double *b, double *seq, int size)
 	
 int main()
 {
-	int i, j;
-	int size = SIZE;
+	int i, j, size;
 	double gpu_times, cpu_times;
 	clock_t t1, t2;
+
+	printf("Input size = ");
+        scanf("%d",&size);
+
 	double *a = (double*)malloc(sizeof(double)*size*size);
 	double *b = (double*)malloc(sizeof(double)*size*size);
 	double *c = (double*)malloc(sizeof(double)*size*size);
@@ -83,7 +86,7 @@ int main()
 	// Initialize the seq matrix
 	for(i = 0; i < size; ++i) 
 		for(j = 0; j < size; ++j) 
-			seq[i*SIZE+j] = 0.f;
+			seq[i*size+j] = 0.f;
 	
 	t1 = clock();
 	// Perform the multiplication

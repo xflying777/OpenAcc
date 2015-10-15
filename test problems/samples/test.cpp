@@ -49,14 +49,17 @@ void cputest1(int N, double *p)
 
 void gputest1(int N, double *q)
 {
-	int i;
+	int i, n;
+	n = 1;
 	#pragma acc data copy(q[0:1])
 	#pragma acc parallel loop seq
-//	#pragma acc kernels
+//	#pragma acc kernels reduction(*:n)
 //	#pragma acc loop seq
 	for(i=0;i<N;i++)
 	{
 		*q = *q + 1;
+		n = n * 2;
 	}
+	printf("n = %d \n", n);
 }
 
