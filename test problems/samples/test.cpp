@@ -58,8 +58,6 @@ void gputest1(int N, double *q)
 	for(i=0;i<N;i++)
 	{
 		*q = *q + 1;
-		n = n * 2;
 	}
-	printf("n = %d \n", n);
 }
 
