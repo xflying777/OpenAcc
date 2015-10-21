@@ -4,7 +4,7 @@
 #include <time.h>
 
 void cpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N);
-void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N);
+void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p);
 void Initial(double *x, double *y, int N);
 int Generate_N(int p);
 void error(double *y_r, double *y_i, double *z_r, double *z_i, int N);
@@ -12,7 +12,7 @@ void Print_Complex_Vector(double *y_r, double *y_i, int N);
 
 int main()
 {
-	int p, N;
+	int i, p, N;
 	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
 	
@@ -36,23 +36,24 @@ int main()
 	cpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	
 	t1 = clock();
-	gpu_bit_reverse(x_r, x_i, z_r, z_i, N);
+	gpu_bit_reverse(x_r, x_i, z_r, z_i, N, p);
 	t2 = clock();
 	gpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	
 	printf(" cpu times = %f \n gpu times = %f \n cpu times / gpu times = %f \n", cpu_times, gpu_times, cpu_times/gpu_times);
-//	error(y_r, y_i, z_r, z_i, N);
+
+	error(y_r, y_i, z_r, z_i, N);
 	
 //	Print_Complex_Vector(y_r, y_i, N);
 }
 
-void Initial(double *x, double *y, int N)
+void Initial(double *x_r, double *x_i, int N)
 {
-	int n;
-	for(n=0;n<N;++n)
+	int i;
+	for(i=0;i<N;i++)
 	{
-		x[n] = n;
-		y[n] = 0.0;
+		x_r[i] = i;
+		x_i[i] = 0.0;
 	}
 }
 
@@ -112,37 +113,58 @@ void cpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		n = n * 2;
 	}
 	
-//	for (i=0;i<N;i++) printf("temp[%d] = %d \n", i, temp[i]);
+	for(i=0;i<N;i++)
+	{
+		if(i < temp[i])
+		{
+			// swap y[i], y[j]
+			t = y_r[i];
+			y_r[i] = y_r[temp[i]];
+			y_r[temp[i]] = t;
+		}
+	}
 }
 
-void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
+void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p)
 {
-	int k, n, i, j, M, *temp;
+	int k, n, i, j, M, *temp, *size_n;
 	double t;
 	
 	temp = (int *) malloc(N*sizeof(int));
+	size_n = (int *) malloc((p+1)*sizeof(int));
+	
 	temp[0] = 0;
+	for(i=0;i<p+1;i++) size_n[i] = pow(2, i);
 	
-	for(n=0;n<N;++n)
+	for(i=0;i<N;i++)
 	{
-		y_r[n] = x_r[n];
-		y_i[n] = x_i[n];
+		y_r[i] = x_r[i];
+		y_i[i] = x_i[i];
 	}
-	
+
 	#pragma acc data copy(temp[0:N])
 	#pragma acc kernels
-	n = 1;
-	#pragma acc loop reduction(*:n)
-	for(M=N/2;M>0;M=M/2)
+	for(M=N/2, j=0;M>0;M=M/2, j++)
 	{
 	#pragma acc loop independent
-		for(i=n;i<2*n;i++)
+		for(i=size_n[j];i<size_n[j+1];i++)
 		{
-			temp[i] = temp[i-n] + M; 
+			temp[i] = temp[i-size_n[j]] + M; 
+		}			
+	}
+	
+	for(i=0;i<N;i++)
+	{
+		if(i < temp[i])
+		{
+			// swap y[i], y[j]
+			t = y_r[i];
+			y_r[i] = y_r[temp[i]];
+			y_r[temp[i]] = t;
 		}
-		n = n * 2;
 	}
 	
 //	for (i=0;i<N;i++) printf("temp[%d] = %d \n", i, temp[i]);
+//	for (i=0;i<N;i++) printf("y_r[%d] = %f \n", i, y_r[i]);
 }
 

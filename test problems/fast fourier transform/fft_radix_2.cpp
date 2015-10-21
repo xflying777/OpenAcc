@@ -12,7 +12,7 @@ int Generate_N(int p);
 
 int main()
 {
-	int p, N;
+	int i, p, N;
 	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
 	
@@ -42,7 +42,7 @@ int main()
 	
 	printf("cpu times = %f \n gpu_times = %f \n cpu times / gpu times = %f \n", cpu_times, gpu_times, cpu_times/gpu_times);
 	error(y_r, y_i, z_r, z_i, N);
-//	Print_Complex_Vector(y_r, y_i, N);
+	Print_Complex_Vector(y_r, y_i, N);
 	
 	return 0;
 } 
