@@ -12,7 +12,7 @@ void Print_Complex_Vector(double *y_r, double *y_i, int N);
 
 int main()
 {
-	int i, p, N;
+	int p, N;
 	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
 	
@@ -91,7 +91,7 @@ void error(double *y_r, double *y_i, double *z_r, double *z_i, int N)
 
 void cpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 {
-	int k, n, i, j, M, *temp;
+	int n, i, M, *temp;
 	double t;
 	
 	temp = (int *) malloc(N*sizeof(int));
@@ -127,7 +127,7 @@ void cpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 
 void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p)
 {
-	int k, n, i, j, M, *temp, *size_n;
+	int i, j, M, *temp, *size_n;
 	double t;
 	
 	temp = (int *) malloc(N*sizeof(int));
@@ -142,17 +142,19 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N, 
 		y_i[i] = x_i[i];
 	}
 
-	#pragma acc data copy(temp[0:N])
+	#pragma acc data copyin(size_n[0:p+1]) copy(temp[0:N], y_r[0:N])
 	#pragma acc kernels
+	{
+	#pragma acc loop independent
 	for(M=N/2, j=0;M>0;M=M/2, j++)
 	{
 	#pragma acc loop independent
 		for(i=size_n[j];i<size_n[j+1];i++)
 		{
-			temp[i] = temp[i-size_n[j]] + M; 
-		}			
+			temp[i] = temp[i-size_n[j]] + M;
+		}
 	}
-	
+	#pragma acc loop independent
 	for(i=0;i<N;i++)
 	{
 		if(i < temp[i])
@@ -163,7 +165,7 @@ void gpu_bit_reverse(double *x_r, double *x_i, double *y_r, double *y_i, int N, 
 			y_r[temp[i]] = t;
 		}
 	}
-	
+	}
 //	for (i=0;i<N;i++) printf("temp[%d] = %d \n", i, temp[i]);
 //	for (i=0;i<N;i++) printf("y_r[%d] = %f \n", i, y_r[i]);
 }

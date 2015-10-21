@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-//#define SIZE 10000
+
 
 //void gpuTest(double *a, double *b, double *c, int size)
 void gpuTest(double *a, double *b, double *restrict c, int size)
@@ -38,14 +38,12 @@ void cpuTest(double *a, double *b, double *seq, int size)
 	
 int main()
 {
-	int i, j, N;
-	int size;
+	int i, j, size;
 	double gpu_times, cpu_times;
 	clock_t t1, t2;
 
         printf("Input N = ");
-        scanf("%d",&N);
-        size = N;
+        scanf("%d",&size);
 
 	double *a = (double*)malloc(sizeof(double)*size*size);
 	double *b = (double*)malloc(sizeof(double)*size);
