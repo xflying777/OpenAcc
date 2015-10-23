@@ -12,7 +12,7 @@ int Generate_N(int p);
 
 int main()
 {
-	int i, p, N;
+	int p, N;
 	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
 	
@@ -111,6 +111,7 @@ void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p)
 	#pragma acc data copyin(size_n[0:p+1]) copy(temp[0:N], y_r[0:N])
 	#pragma acc kernels
 	{
+
 	#pragma acc loop independent
 	for(M=N/2, j=0;M>0;M=M/2, j++)
 	{
@@ -131,8 +132,9 @@ void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p)
 			y_r[temp[i]] = t;
 		}
 	}
-	}
-	
+
+//	}
+
 	// Butterfly structure
 	int n, k;
 	double theta, w_r, w_i, t_r, t_i;
@@ -149,7 +151,6 @@ void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p)
 				j = i + n/2;
 				t_r = w_r * y_r[j] - w_i * y_i[j];
 				t_i = w_r * y_i[j] + w_i * y_r[j];
-				
 
 				y_r[j] = y_r[i] - t_r;
 				y_i[j] = y_i[i] - t_i;
@@ -160,7 +161,8 @@ void gpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N, int p)
 		}
 		n = n * 2;
 	}
-	
+
+	}
 }
 
 
@@ -170,7 +172,7 @@ void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 	// output: y = y_r + i * y_i
 	int k, n, i, j, M;
 	double t_r, t_i;
-	
+
 	for(n=0;n<N;++n)
 	{
 		y_r[n] = x_r[n];

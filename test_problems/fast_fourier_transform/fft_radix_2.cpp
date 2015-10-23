@@ -12,38 +12,38 @@ int Generate_N(int p);
 
 int main()
 {
-	int i, p, N;
+	int p, N;
 	double *y_r, *y_i, *z_r, *z_i, *x_r, *x_i, cpu_times, gpu_times;
 	clock_t t1, t2;
-	
+
 	printf("Please input N = 2^p, p = ");
 	scanf("%d",&p);
 	N = Generate_N(p);
 	printf("N = 2^%d = %d \n", p, N);
-	
+
 	x_r = (double *) malloc(N*sizeof(double));
 	x_i = (double *) malloc(N*sizeof(double));
 	y_r = (double *) malloc(N*sizeof(double));
 	y_i = (double *) malloc(N*sizeof(double));
 	z_r = (double *) malloc(N*sizeof(double));
 	z_i = (double *) malloc(N*sizeof(double));
-	
+
 	Initial(x_r, x_i, N);
-	
+
 	t1 = clock();
 	cpuFFTr2(x_r, x_i, y_r, y_i, N);
 	t2 = clock();
 	cpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
-	
+
 	t1 = clock();
 	gpuFFTr2(x_r, x_i, z_r, z_i, N);
 	t2 = clock();
 	gpu_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;	
-	
+
 	printf("cpu times = %f \n gpu_times = %f \n cpu times / gpu times = %f \n", cpu_times, gpu_times, cpu_times/gpu_times);
 	error(y_r, y_i, z_r, z_i, N);
-	Print_Complex_Vector(y_r, y_i, N);
-	
+//	Print_Complex_Vector(y_r, y_i, N);
+
 	return 0;
 } 
 
@@ -86,7 +86,7 @@ void error(double *y_r, double *y_i, double *z_r, double *z_i, int N)
 		}
 	}
 	printf("OpenACC test was successful! \n");
-		
+
 }
 
 void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
@@ -95,7 +95,7 @@ void cpuFFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 	// output: y = y_r + i * y_i
 	int k, n, i, j, M;
 	double t_r, t_i;
-	
+
 	for(n=0;n<N;++n)
 	{
 		y_r[n] = x_r[n];
