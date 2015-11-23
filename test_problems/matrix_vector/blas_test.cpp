@@ -32,11 +32,10 @@ int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 	return CUBLAS_STATUS_SUCCESS == stat;
 }
 void gpu_oacc(int n, double *a, double *b, double *c)
-//void gpuTest(double **A, double **B, double *restriCt C, int n)
 {
 	int i,j,k;
 	// Compute mAtrix multipliCAtion.
-	#pragma acc data copyin(a[0:n*n],b[0:n*n]) copy(c_gpu_oacc[0:n*n])
+	#pragma acc data copyin(a[0:n*n],b[0:n*n]) copy(c[0:n*n])
 	#pragma acc kernels
 	#pragma acc loop independent
 	for (i = 0; i < n; ++i) 
@@ -101,15 +100,15 @@ int main()
 	gpu_oacc_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	
 	t1 = clock();
-	#pragma acc data copyin( a[0:n*n], b[0:n*n] ) copyout( c[0:n*n] )
+	#pragma acc data copyin( a[0:n*n], b[0:n*n] ) copyout( c_gpu_cublas3[0:n*n] )
 	{
-		gpu_cublas( n, a, b, c_gpu_cublas3);
+		gpu_cublas3( n, a, b, c_gpu_cublas3);
 	}
 	t2 = clock();
 	gpu_cublas3_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
     int nfailures = 0;
-    printf("%lf %lf\n", c[0], c[n*n-1]);
+    printf(" %lf %lf\n", c_gpu_cublas3[0], c_gpu_cublas3[n*n-1]);
     for (int i = 0; i < n; ++i) 
 	{
 		for (int j = 0; j < n; ++j) 
@@ -133,7 +132,7 @@ int main()
 		printf(" cpu times = %f \n", cpu_times);
 		printf(" gpu oacc times = %f \n", gpu_oacc_times);
 		printf(" gpu cublas3 times = %f \n", gpu_cublas3_times);
-		printf(" cpu times/gpu oacc times = %f \n", cpu_times/gpu_times);
+		printf(" cpu times/gpu oacc times = %f \n", cpu_times/gpu_oacc_times);
 		printf(" cpu times/gpu cublas3 times = %f \n", cpu_times/gpu_cublas3_times);
 		printf(" gpu oacc times/gpu cublas3 times = %f \n", gpu_oacc_times/gpu_cublas3_times);
 	}
