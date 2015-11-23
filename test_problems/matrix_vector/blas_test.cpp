@@ -131,9 +131,11 @@ int main()
       	printf(" Test tblas6 PASSED\n");
 		printf(" cpu times = %f \n", cpu_times);
 		printf(" gpu oacc times = %f \n", gpu_oacc_times);
-		
+		printf(" gpu cublas3 times = %f \n", gpu_cublas3_times);
 		printf(" cpu times/gpu oacc times = %f \n", cpu_times/gpu_times);
+		printf(" cpu times/gpu cublas3 times = %f \n", cpu_times/gpu_cublas3_times);
+		printf(" gpu oacc times/gpu cublas3 times = %f \n", gpu_oacc_times/gpu_cublas3_times);
 	}
 	
-	return error;
+	return nfailures;
 }
