@@ -1,11 +1,13 @@
 #include "cublas_v2.h"
 #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 {
 	cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
-	#pragma acc data pcopyin( a[0:n2], b[0:n2] ) pcopyout( c[0:n2] )
+	#pragma acc data pcopyin( a[0:n*n], b[0:n*n] ) pcopyout( c[0:n*n] )
 	{
 		#pragma acc host_data use_device( a, b, c )
 		{
@@ -34,7 +36,7 @@ void gpu_oacc(int n, double *a, double *b, double *c)
 {
 	int i,j,k;
 	// Compute mAtrix multipliCAtion.
-	#pragma acc data copyin(A[0:n][0:n],B[0:n][0:n]) copy(C[0:n][0:n])
+	#pragma acc data copyin(a[0:n*n],b[0:n*n]) copy(c_gpu_oacc[0:n*n])
 	#pragma acc kernels
 	#pragma acc loop independent
 	for (i = 0; i < n; ++i) 
@@ -66,19 +68,18 @@ void cpu_gemm( int n, const double *a, const double *b, double *c_cpu)
 
 int main()
 {
-	int i, j, size;
+	int i, j, n;
 	double gpu_cublas3_times, gpu_oacc_times, cpu_times;
 	clock_t t1, t2;
 
 	printf("Input size n = ");
     scanf("%d",&n);
-	int n2 = n*n;
 	
-	double *a = (double*)malloc(sizeof(double)*n2);
-	double *b = (double*)malloc(sizeof(double)*n2);
-	double *c_gpu_cublas3 = (double*)malloc(sizeof(double)*n2);
-	double *c_gpu_oacc = (double*)malloc(sizeof(double)*n2);
-	double *c_cpu = (double*)malloc(sizeof(double)*n2);
+	double *a = (double*)malloc(sizeof(double)*n*n);
+	double *b = (double*)malloc(sizeof(double)*n*n);
+	double *c_gpu_cublas3 = (double*)malloc(sizeof(double)*n*n);
+	double *c_gpu_oacc = (double*)malloc(sizeof(double)*n*n);
+	double *c_cpu = (double*)malloc(sizeof(double)*n*n);
 	
 	for (i = 0; i < n; ++i)
 	{
@@ -100,15 +101,15 @@ int main()
 	gpu_oacc_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	
 	t1 = clock();
-	#pragma acc data copyin( a[0:n2], b[0:n2] ) copyout( c[0:n2] )
+	#pragma acc data copyin( a[0:n*n], b[0:n*n] ) copyout( c[0:n*n] )
 	{
-		gpu_cublas( n, a, b, c);
+		gpu_cublas( n, a, b, c_gpu_cublas3);
 	}
 	t2 = clock();
 	gpu_cublas3_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
     int nfailures = 0;
-    printf("%lf %lf\n", c[0], c[n2-1]);
+    printf("%lf %lf\n", c[0], c[n*n-1]);
     for (int i = 0; i < n; ++i) 
 	{
 		for (int j = 0; j < n; ++j) 
