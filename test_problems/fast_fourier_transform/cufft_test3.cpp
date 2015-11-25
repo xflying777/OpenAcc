@@ -3,6 +3,7 @@
 #include <cuda.h> 
 #include <cuda_runtime.h> 
 #include <cufft.h> 
+#include <sys/time.h>
 
 #define NX 1200 
 #define NY 1200 
