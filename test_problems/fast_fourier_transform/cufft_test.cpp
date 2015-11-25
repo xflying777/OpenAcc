@@ -1,3 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "openacc.h"
+
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
+
 #include <cufft.h>
 
 // Declared extern "C" to disable C++ name mangling
@@ -10,14 +19,6 @@ extern "C" void launchCUFFT(float *d_data, int n, void *stream)
     cufftDestroy(plan);
 }
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "openacc.h"
-
-#ifndef M_PI
-#define M_PI           3.14159265358979323846
-#endif
 
 // Forward declaration of wrapper function that will call CUFFT
 extern void launchCUFFT(float *d_data, int n, void *stream);
@@ -25,7 +26,7 @@ extern void launchCUFFT(float *d_data, int n, void *stream);
 int main(int argc, char *argv[])
 {
     int n = 256;
-    float *data = malloc(2*n*sizeof(float));
+    float *data =(float* ) malloc(2*n*sizeof(float));
     int i;
 
     // Initialize interleaved input data on host
