@@ -10,6 +10,7 @@ extern "C" void launchCUFFT(float *d_data, int n, void *stream)
     cufftPlan1d(&plan, n, CUFFT_C2C, 1);
     cufftSetStream(plan, (cudaStream_t)stream);
     cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
+    cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_INVERSE);
     cufftDestroy(plan);
 }
 
