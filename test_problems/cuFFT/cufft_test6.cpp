@@ -19,7 +19,7 @@ extern "C" void for_CUFFT(float *d_data, int n, void *stream)
 
 int main(int argc, char *argv[])
 {
-    int n = 256;
+    int n = 8;
     float *data = (float* )malloc(2*n*sizeof(float));
     int i;
     
@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    for(i=0; i<n; i+=2) {
-		printf(" data[%d] = %f \n", i, data[i]);
+    for(i=0; i<2*n; i+=2) {
+	printf(" cufft_data[%d] = %f + %f i \n", i/2, data[i],data[i+1]);
     }
 
     return 0;
