@@ -65,5 +65,7 @@ int main()
 	for ( i = 0 ;i < n; ++i) 
 		for ( j = 0; j < n; ++j)
 			printf(" c[%d][%d] = %f \n", i, j, c_gpu_cublas3[i*n + j]);
-	return nfailures;
+
+	printf("cublas times = %f \n ", gpu_cublas3_times);
+	return 0;
 }
