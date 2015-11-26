@@ -1,0 +1,13 @@
+PGI compiler
+
+compiler command:
+
+for c++
+ex: pgc++ -acc -ta=nvidia -Minfo name.cpp
+
+for c++ and cublas
+ex: pgc++ -acc -ta=nvidia -Minfo -Mcudalib=cublas name.cpp
+ex: pgc++ -acc -ta=tesla -Minfo -Mcudalib=cublas -o name name.cpp
+
+for c++ and cufft
+ex: pgc++ -acc -ta=nvidia -Minfo -Mcudalib=cufft name.cpp

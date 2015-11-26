@@ -3,6 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*
+ Note : cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n)
+ 		means matrix C = B * A
+ 		
+ 		In cublasDgemm ,we should set matrix as array.
+*/
 
 int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 {
@@ -46,7 +52,7 @@ void gpu_oacc(int n, double *a, double *b, double *c)
 	#pragma acc loop seq
 			for (k = 0; k < n; ++k) 
 			{
-				c[i*n+j] += a[i*n+k] * b[k*n+j];
+				c[i*n+j] += b[i*n+k] * a[k*n+j];
 			}
 		}
 	}
@@ -60,7 +66,7 @@ void cpu_gemm( int n, const double *a, const double *b, double *c_cpu)
 		for (j = 0; j < n; j++)
 			for(k = 0; k < n; k++ )
 			{
-				c_cpu[i*n+j] += a[i*n+k]*b[j+n*k];
+				c_cpu[i*n+j] += b[i*n+k]*a[j+n*k];
 			}
 }
 
