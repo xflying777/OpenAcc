@@ -1,7 +1,7 @@
 #include <cufft.h>
 
 // Declared extern "C" to disable C++ name mangling
-extern "C" void launchCUFFT(float *d_data, int n, void *stream)
+extern "C" void for_CUFFT(float *d_data, int n, void *stream)
 {
     cufftHandle plan;
     cufftPlan1d(&plan, n, CUFFT_C2C, 1);
@@ -9,6 +9,17 @@ extern "C" void launchCUFFT(float *d_data, int n, void *stream)
     cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
     cufftDestroy(plan);
 }
+
+/*
+extern "C" void inv_CUFFT(float *d_data, int n, void *stream)
+{
+    cufftHandle plan;
+    cufftPlan1d(&plan, n, CUFFT_C2R, 1);
+    cufftSetStream(plan, (cudaStream_t)stream);
+    cufftExecC2R(plan, (cufftComplex*)d_data, (cufftReal*)d_data,CUFFT_INVERSE);
+    cufftDestroy(plan);
+}
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,7 +55,8 @@ int main(int argc, char *argv[])
         #pragma acc host_data use_device(data)
         {
            void *stream = acc_get_cuda_stream(acc_async_sync);
-           launchCUFFT(data, n, stream);
+           for_CUFFT(data, n, stream);
+//	   inv_CUFFT(data, n, stream);
         }
     }
 
