@@ -46,7 +46,7 @@ void gpu_oacc(int n, double *a, double *b, double *c)
 	#pragma acc loop seq
 			for (k = 0; k < n; ++k) 
 			{
-				c[i*n+j] += a[i*n+k] * b[k*n+j];
+				c[i*n+j] += b[i*n+k] * a[k*n+j];
 			}
 		}
 	}
