@@ -19,10 +19,10 @@ int main()
 	float cpu_FFT_times, gpu_cuFFT_times, error;
 	clock_t t1, t2;
 	
-	printf("Please input p =");
+	printf(" Please input p =");
 	scanf("%d", &p);
 	N = Generate_N(p);
-	printf("N = 2^%d = %d \n", p, N);
+	printf(" N = 2^%d = %d \n", p, N);
 	
 	x_r = (float *) malloc(N*sizeof(float));
 	x_i = (float *) malloc(N*sizeof(float));
@@ -62,10 +62,11 @@ int main()
 	
 	error = Error(y_r, y_i, data, N);
 	
+	printf(" y_r[0] = %f, data[0] = %f \n", y_r[0], data[0]);
 	printf(" cpu FFT: %f secs \n", cpu_FFT_times);
 	printf(" gpu cuFFT: %f secs \n", gpu_cuFFT_times);
 	printf(" cpu FFT / gpu cuFFT: %f times \n", cpu_FFT_times / gpu_cuFFT_times);
-	printf("error = %f \n", error);
+	printf(" error = %f \n", error);
 	printf(" \n");
 //	Print_Complex_Vector(y_r, y_i, data, N);
 	
@@ -81,10 +82,13 @@ float Error(float *y_r, float *y_i, float *data, int N)
 	for (i = 0; i < N; i++)
 	{
 		temp = fabs(data[2*i] - y_r[i]);
-		if (temp > error) error = temp;
-		
-		temp = fabs(data[2*i+1] - y_i[i]);
-		if (temp > error) error = temp; 
+		if (temp > error) 
+		{
+			error = temp;
+			printf(" error at i = %d , y_r = %f, data = %f \n", i, y_r[i], data[2*i]);
+		}
+//		temp = fabs(data[2*i+1] - y_i[i]);
+//		if (temp > error) error = temp; 
 	}
 	
 	return error;
