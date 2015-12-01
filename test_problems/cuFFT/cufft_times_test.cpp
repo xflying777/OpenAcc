@@ -6,17 +6,17 @@
 #include "openacc.h"
 
 extern "C" void forward_cuFFT(float *d_data, int N, void *stream);
-void FFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N);
-void Initial(double *x, double *y, int N);
-void Print_Complex_Vector(double *y_r, double *y_i, float *data, int N);
+void FFTr2(float *x_r, float *x_i, float *y_r, float *y_i, int N);
+void Initial(float *x, float *y, int N);
+void Print_Complex_Vector(float *y_r, float *y_i, float *data, int N);
 int Generate_N(int p);
+float Error(float *y_r, float *y_i, float *data, int N);
 
 int main()
 {
 	int i, p, N;
-	double *y_r, *y_i, *x_r, *x_i;
-	float *data;
-	double cpu_FFT_times, gpu_cuFFT_times;
+	float *y_r, *y_i, *x_r, *x_i, *data;
+	float cpu_FFT_times, gpu_cuFFT_times, error;
 	clock_t t1, t2;
 	
 	printf("Please input p =");
@@ -24,10 +24,10 @@ int main()
 	N = Generate_N(p);
 	printf("N = 2^%d = %d \n", p, N);
 	
-	x_r = (double *) malloc(N*sizeof(double));
-	x_i = (double *) malloc(N*sizeof(double));
-	y_r = (double *) malloc(N*sizeof(double));
-	y_i = (double *) malloc(N*sizeof(double));
+	x_r = (float *) malloc(N*sizeof(float));
+	x_i = (float *) malloc(N*sizeof(float));
+	y_r = (float *) malloc(N*sizeof(float));
+	y_i = (float *) malloc(N*sizeof(float));
 	data = (float *) malloc(2*N*sizeof(float));
 	
 	
@@ -60,17 +60,36 @@ int main()
 	cpu_FFT_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	// End test
 	
+	error = Error(y_r, y_i, data, N);
 	
 	printf(" cpu FFT: %f secs \n", cpu_FFT_times);
 	printf(" gpu cuFFT: %f secs \n", gpu_cuFFT_times);
 	printf(" cpu FFT / gpu cuFFT: %f times \n", cpu_FFT_times / gpu_cuFFT_times);
+	printf("error = %f \n", error);
 	printf(" \n");
 //	Print_Complex_Vector(y_r, y_i, data, N);
 	
 	return 0;
 } 
 
-void Initial(double *x, double *y, int N)
+float Error(float *y_r, float *y_i, float *data, int N)
+{
+	int i;
+	float error, temp;
+	
+	error = 0.0;
+	for (i = 0; i < N; i++)
+	{
+		temp = fabs(data[2*i] - y_r[i]);
+		if (temp > error) error = temp;
+		
+		temp = fabs(data[2*i+1] - y_i[i]);
+		if (temp > error) error = temp; 
+	}
+	
+	return error;
+}
+void Initial(float *x, float *y, int N)
 {
 	int i;
 	for(i=0;i<N;++i)
@@ -80,7 +99,7 @@ void Initial(double *x, double *y, int N)
 	}
 }
 
-void Print_Complex_Vector(double *y_r, double *y_i, float *data, int N)
+void Print_Complex_Vector(float *y_r, float *y_i, float *data, int N)
 {
 	int i;
 	for(i=0; i<N; ++i)
@@ -102,7 +121,7 @@ int Generate_N(int p)
 	return N;
 }
 
-void FFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
+void FFTr2(float *x_r, float *x_i, float *y_r, float *y_i, int N)
 {
 	// input : x = x_r + i * x_i
 	// output: y = y_r + i * y_i
@@ -113,7 +132,7 @@ void FFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		y_i[n] = x_i[n];
 	}
 	int i, j, M;
-	double t_r, t_i;
+	float t_r, t_i;
 	i = j = 0;
 	while(i < N)
 	{
@@ -137,7 +156,7 @@ void FFTr2(double *x_r, double *x_i, double *y_r, double *y_i, int N)
 		i = i + 1;
 	}
 	// Butterfly structure
-	double theta, w_r, w_i;
+	float theta, w_r, w_i;
 	n = 2;
 	while(n <= N)
 	{
