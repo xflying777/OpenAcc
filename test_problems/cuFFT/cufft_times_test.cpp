@@ -19,7 +19,7 @@ int main()
 	float cpu_FFT_times, gpu_cuFFT_times, error;
 	clock_t t1, t2;
 	
-	printf(" Please input p =");
+	printf(" Please input p (N = 2^p) =");
 	scanf("%d", &p);
 	N = Generate_N(p);
 	printf(" N = 2^%d = %d \n", p, N);
@@ -60,13 +60,13 @@ int main()
 	cpu_FFT_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	// End test
 	
-	error = Error(y_r, y_i, data, N);
+//	error = Error(y_r, y_i, data, N);
 	
 	printf(" y_r[0] = %f, data[0] = %f \n", y_r[0], data[0]);
 	printf(" cpu FFT: %f secs \n", cpu_FFT_times);
 	printf(" gpu cuFFT: %f secs \n", gpu_cuFFT_times);
 	printf(" cpu FFT / gpu cuFFT: %f times \n", cpu_FFT_times / gpu_cuFFT_times);
-	printf(" error = %f \n", error);
+//	printf(" error = %f \n", error);
 	printf(" \n");
 //	Print_Complex_Vector(y_r, y_i, data, N);
 	
