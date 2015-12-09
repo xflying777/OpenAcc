@@ -17,7 +17,7 @@ int main()
 	int i, p, N;
 	float *y_r, *y_i, *x_r, *x_i, *data;
 	float cpu_FFT_times, gpu_cuFFT_times, error;
-	clock_t t1, t2;
+	clock_t t1, t2, t3, t4;
 	
 	printf(" Please input p (N = 2^p) =");
 	scanf("%d", &p);
@@ -48,11 +48,13 @@ int main()
         #pragma acc host_data use_device(data)
         	{
            		void *stream = acc_get_cuda_stream(acc_async_sync);
+			t3 = clock();
            		forward_cuFFT(data, N, stream);
+			t4 = clock();
         	}
     	}
     	t2 = clock();
-    	gpu_cuFFT_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+    	gpu_cuFFT_times = 1.0*(t4-t3)/CLOCKS_PER_SEC;
     
 	t1 = clock();
 	FFTr2(x_r, x_i, y_r, y_i, N);
@@ -64,7 +66,8 @@ int main()
 	
 	printf(" y_r[0] = %f, data[0] = %f \n", y_r[0], data[0]);
 	printf(" cpu FFT: %f secs \n", cpu_FFT_times);
-	printf(" gpu cuFFT: %f secs \n", gpu_cuFFT_times);
+//	printf(" gpu cuFFT(communication): %f secs \n", gpu_cuFFT_times);
+	printf(" gpu cuFFT (Only computing): %f secs \n", 1.0*(t4-t3)/CLOCKS_PER_SEC);
 	printf(" cpu FFT / gpu cuFFT: %f times \n", cpu_FFT_times / gpu_cuFFT_times);
 //	printf(" error = %f \n", error);
 	printf(" \n");
