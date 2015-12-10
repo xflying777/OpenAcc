@@ -62,14 +62,14 @@ int main()
 	cpu_FFT_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 	// End test
 	
-//	error = Error(y_r, y_i, data, N);
+	error = Error(y_r, y_i, data, N);
 	
 	printf(" y_r[0] = %f, data[0] = %f \n", y_r[0], data[0]);
 	printf(" cpu FFT: %f secs \n", cpu_FFT_times);
 //	printf(" gpu cuFFT(communication): %f secs \n", gpu_cuFFT_times);
 	printf(" gpu cuFFT (Only computing): %f secs \n", 1.0*(t4-t3)/CLOCKS_PER_SEC);
 	printf(" cpu FFT / gpu cuFFT: %f times \n", cpu_FFT_times / gpu_cuFFT_times);
-//	printf(" error = %f \n", error);
+	printf(" error = %f \n", error);
 	printf(" \n");
 //	Print_Complex_Vector(y_r, y_i, data, N);
 	
