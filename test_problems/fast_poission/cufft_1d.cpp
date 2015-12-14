@@ -4,11 +4,11 @@
 // Declared extern "C" to disable C++ name mangling
 extern "C" void for_CUFFT(float *d_data, int n, void *stream)
 {
-    cufftHandle plan;
-    cufftPlan1d(&plan, n, CUFFT_C2C, 1);
-    cufftSetStream(plan, (cudaStream_t)stream);
-    cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
-    cufftDestroy(plan);
+	cufftHandle plan;
+	cufftPlan1d(&plan, n, CUFFT_C2C, 1);
+	cufftSetStream(plan, (cudaStream_t)stream);
+	cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
+	cufftDestroy(plan);
 }
 
 
@@ -18,39 +18,36 @@ extern "C" void for_CUFFT(float *d_data, int n, void *stream)
 #include <time.h>
 #include "openacc.h"
 
-int main(int argc, char *argv[])
+int main()
 {
-    int i, n;
-    float t1, t2;
-    n = 8;
-    float *data = (float* )malloc(2*n*sizeof(float));
-    
-    // Initialize interleaved input data on host
-    for(i=0; i<2*n; i+=2)  
-	{
-        data[i] = i/2.0;
-        data[i+1] = 0.0;
-    }
+	int i, N;
+	N = 16;
+	float *data = (float* )malloc(2*N*sizeof(float));
 
-//    t1 = clock();
-    // Copy data to device at start of region and back to host and end of region
-    #pragma acc data copy(data[0:2*n])
-    {
-        // Inside this region the device data pointer will be used
-        #pragma acc host_data use_device(data)
-        {
-           void *stream = acc_get_cuda_stream(acc_async_sync);
-	   t1 = clock();
-           for_CUFFT(data, n, stream);
-	   t2 = clock();
-        }
-    }
-//    t2 = clock();
-    
-    for(i=0; i<2*n; i+=2) 
-    {
-	printf(" cufft_data[%d] = %f + %f i \n", i/2, data[i],data[i+1]);
-    }
-    printf(" time = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
-    return 0;
+
+	#pragma acc data create(data[0:2*N])
+	#pragma acc kernels
+	// Initialize interleaved input data on host
+	for(i=0; i<N; i++)  
+	{
+		data[2*i] = i/2.0;
+		data[2*i+1] = 0.0;
+	}
+
+	// Copy data to device at start of region and back to host and end of region
+	#pragma acc data copyout(data[0:2*N])
+	{
+		// Inside this region the device data pointer will be used
+		#pragma acc host_data use_device(data)
+		{
+			void *stream = acc_get_cuda_stream(acc_async_sync);
+			for_CUFFT(data, N, stream);
+		}
+	}
+
+	for(i=0; i<2*N; i+=2) 
+	{
+		printf(" cufft_data[%d] = %f + %f i \n", i/2, data[i],data[i+1]);
+	}
+	return 0;
 }
