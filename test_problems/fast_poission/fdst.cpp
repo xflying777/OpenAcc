@@ -10,6 +10,7 @@ int Generate_N(int p);
 void printf_resault(float *x, float *y, int N);
 void fdst_gpu(float *data, float *data2, float *data3, int N, int L);
 void fdst_cpu(float *x_r, float *x_i, float *y_r, float *y_i, int N, int L);
+void error(float *y_r, float *data, int N);
 
 int main()
 {
@@ -46,10 +47,12 @@ int main()
 	t2 = clock();
 	gpu_times = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
 	
+	error(y_r, data, N);
 	printf(" fdst CPU: %f secs \n", cpu_times);
 	printf(" fdst GPU: %f secs \n", gpu_times);
 	printf("CPU / GPU : %f times \n", cpu_times/gpu_times);
-
+	
+	printf_resault(y_r, data, N);
 	return 0;
 }
  
@@ -86,12 +89,24 @@ int Generate_N(int p)
 	return N;
 }
 
+void error(float *y_r, float *data, int N)
+{
+	float error, temp;
+	error = 0.0;
+	for (int i=0;i<N;i++)
+	{
+		temp = abs(data[i] - y_r[i]);
+		if (temp > error) error = temp;
+	}
+	printf(" error = %f \n", error);
+}
+
 //////////////
 // GPU part //
 //////////////
 
 // expand the initial data to 2N+2-points for fast fourier discrete sine transformation
-/*
+
 void expand_gpu(float *data, float *data2, int N)
 {
 	// expand data to 2N + 2 length 
@@ -118,7 +133,7 @@ void expand_idata(float *data2, float *data3, int L)
 		data3[2*i+1] = 0.0;
 	}
 }
-*/
+
 
 extern "C" void cuda_fft(float *d_data, int N, void *stream)
 {
@@ -133,28 +148,10 @@ void fdst_gpu(float *data, float *data2, float *data3, int N, int L)
 {
 	int i;
 	#pragma acc data copy(data[0:N]), create(data2[0:L], data3[0:2*L])
-//	expand_gpu(data, data2, N);
-//	expand_idata(data2, data3, L);
-
-	// expand data to 2N + 2 length 
-	#pragma acc kernels
-	{
-		data2[0] = data2[N+1] = 0.0;
-		#pragma acc loop independent
-		for(i=0;i<N;i++)
-		{
-			data2[i+1] = data[i];
-			data2[N+i+2] = -1.0*data[N-1-i];
-		}
-	}
-
-	#pragma acc parallel loop independent
-	for (i=0;i<L;i++)
-	{
-		data3[2*i] = data2[i];
-		data3[2*i+1] = 0.0;
-	}
-
+	expand_gpu(data, data2, N);
+	expand_idata(data2, data3, L);
+	
+	#pragma acc data copyout(data3[0:2*L])
 	// Copy data to device at start of region and back to host and end of region
 	// Inside this region the device data pointer will be used
 	#pragma acc host_data use_device(data3)
