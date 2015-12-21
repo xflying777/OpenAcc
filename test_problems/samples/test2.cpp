@@ -1,3 +1,7 @@
+/*
+Test : Using cufft to do discrete sine transform
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
