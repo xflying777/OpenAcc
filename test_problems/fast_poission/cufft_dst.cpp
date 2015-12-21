@@ -117,7 +117,8 @@ extern "C" void cuda_fft(float *d_data, int N, void *stream)
 void fdst_gpu(float *data, float *data2, float *data3, int N, int L)
 {
 	int i;
-	#pragma acc kernels copyin(data[0:N]), create(data2[0:L]), copy(data3[0:2*L])
+	#pragma acc kernels copy(data[0:N], data3[0:2*L]), copyin(data2[0:L])
+//	#pragma acc kernels copy(data[0:N]), copyin(data2[0:L], data3[0:2*L])
 	{
 	expand_data(data, data2, N, L);
 	expand_idata(data2, data3, L);
@@ -131,8 +132,7 @@ void fdst_gpu(float *data, float *data2, float *data3, int N, int L)
 		void *stream = acc_get_cuda_stream(acc_async_sync);
 		cuda_fft(data3, L, stream);
 	}
-	
-	#pragma acc data copy(data[0:N]), copyin(data3[0:2*L])
+
 	#pragma acc parallel loop independent
 	for(i=0;i<N;i++)
 	{
