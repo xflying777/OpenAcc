@@ -20,7 +20,7 @@ int main()
 	int i, N, L, p; 
 	double **X, **U, **F;
 	clock_t t1, t2;
-	p = pow(2, 12);
+	p = pow(2, 10);
 	// Create memory for solving Ax = b, where r = b-Ax is the residue.
 	for(N=4;N<=p;N*=2)
 	{
@@ -66,10 +66,10 @@ void Exact_Solution(double **U, int N)
 	h = 1.0/N;
 	for(i=0;i<N-1;++i)
 	{
+		x = (i+1)*h;
 		for(j=0;j<N-1;++j)
 		{
 			//k = j + i*(N-1);
-			x = (i+1)*h;
 			y = (j+1)*h;
 			U[i][j] = sin(M_PI*x)*sin(2*M_PI*y);
 		}
@@ -82,10 +82,10 @@ void Exact_Source(double **F, int N)
 	h = 1.0/N;
 	for(i=0;i<N-1;++i)
 	{
+		x = (i+1)*h;
 		for(j=0;j<N-1;++j)
 		{
 			//k = j + i*(N-1);
-			x = (i+1)*h;
 			y = (j+1)*h;
 			F[i][j] = -(1.0+4.0)*h*h*M_PI*M_PI*sin(M_PI*x)*sin(2*M_PI*y);
 		}
