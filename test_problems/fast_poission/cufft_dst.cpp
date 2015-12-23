@@ -1,5 +1,5 @@
 /*
-Test : Using cufft to do discrete sine transform
+Test : Using cufft to do discrete sine transform and compare with cpu.
 */
 
 #include <stdio.h>

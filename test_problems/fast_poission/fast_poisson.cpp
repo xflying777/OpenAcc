@@ -1,3 +1,6 @@
+/*
+Using discrete sine transform and solve the Poisson equation.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
