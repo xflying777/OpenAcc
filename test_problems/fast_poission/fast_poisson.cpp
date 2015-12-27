@@ -20,42 +20,40 @@ int main()
 	int i, N, L, p; 
 	double **X, **U, **F;
 	clock_t t1, t2;
-	p = pow(2, 10);
-	// Create memory for solving Ax = b, where r = b-Ax is the residue.
-	for(N=4;N<=p;N*=2)
-	{
-		// M is the total number of unknowns.
-		L = (N-1);
-		// Prepare for two dimensional unknown F
-		// where b is the one dimensional vector and 
-		// F[i][j] = F[j+i*(N-1)];
-		F = (double **) malloc(L*sizeof(double*));
-		F[0] = (double *) malloc(L*L*sizeof(double));
-		for(i=1;i<L;++i) F[i] = F[i-1] + L;
 
-		X = (double **) malloc(L*sizeof(double*));
-		X[0] = (double *) malloc(L*L*sizeof(double));
-		for(i=1;i<L;++i) X[i] = X[i-1] + L;
+	printf(" Please input (N = 2^p - 1) p = \n");
+	scanf("%d",&p);
+	N = pow(2, p);
+	// Create memory for solving Ax = b, where r = b-Ax is the residue.
+	// M is the total number of unknowns.
+	L = (N-1);
+	// Prepare for two dimensional unknown F
+	// where b is the one dimensional vector and 
+	// F[i][j] = F[j+i*(N-1)];
+	F = (double **) malloc(L*sizeof(double*));
+	F[0] = (double *) malloc(L*L*sizeof(double));
+	for(i=1;i<L;++i) F[i] = F[i-1] + L;
+
+	X = (double **) malloc(L*sizeof(double*));
+	X[0] = (double *) malloc(L*L*sizeof(double));
+	for(i=1;i<L;++i) X[i] = X[i-1] + L;
 				
-		// Prepare for two dimensional unknowns U
-		// where u is the one dimensional vector and
-		// U[i][j] = u[j+i*(N-1)] 
-		U = (double **) malloc(L*sizeof(double*));
-		U[0] = (double *) malloc(L*L*sizeof(double));
-		for(i=1;i<L;++i) U[i] = U[i-1] + L;
+	// Prepare for two dimensional unknowns U
+	// where u is the one dimensional vector and
+	// U[i][j] = u[j+i*(N-1)] 
+	U = (double **) malloc(L*sizeof(double*));
+	U[0] = (double *) malloc(L*L*sizeof(double));
+	for(i=1;i<L;++i) U[i] = U[i-1] + L;
 		
-		Exact_Solution(U, N);
-		Exact_Source(F, N);
-		t1 = clock();
-		Fast_Poisson_Solver(F, X, L);
-		t2 = clock();
-		printf(" Fast Poisson Solver: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
-		printf(" For N = %d error = %e \n", N, Error(X, U, L));
-		printf(" \n");
-		free(X);
-		free(U);
-		free(F);
-	}
+	Exact_Solution(U, N);
+	Exact_Source(F, N);
+	t1 = clock();
+	Fast_Poisson_Solver(F, X, L);
+	t2 = clock();
+	printf(" Fast Poisson Solver: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+	printf(" For N = %d error = %e \n", N, Error(X, U, L));
+	printf(" \n");
+
 	return 0;
 }
 void Exact_Solution(double **U, int N)

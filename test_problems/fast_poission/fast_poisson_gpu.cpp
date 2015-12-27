@@ -56,13 +56,13 @@ int main()
 	t2 = clock();
 	
 	printf(" Fast Poisson Solver: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
-	printf(" For N = %d error = %f \n", Nx, Error(x, u, Nx));
+	printf(" For N = %d error = %e \n", Nx, Error(x, u, Nx));
 	
 /*	printf(" \n \n");
-	printf(" u matrix");
+	printf(" u matrix \n");
 	print_matrix(u, Nx);
 	printf(" \n \n");
-	printf(" x matrix");
+	printf(" x matrix \n");
 	print_matrix(x, Nx);
 */	return 0;
 }
@@ -72,8 +72,8 @@ void print_matrix(float *x, int N)
 	int i, j;
 	for(i=0;i<N;i++)
 	{
-		printf("\n");
 		for (j=0;j<N;j++) printf(" %f ", x[N*i+j]);
+		printf("\n");
 	}
 }
 
@@ -116,13 +116,14 @@ float Error(float *x, float *u, int Nx)
 {
 	// return max_i |x[i] - u[i]|
 	int i, j;
-	float v = 0.0, e;
+	float v, e;
+	v = 0.0;
 	
 	for(i=0;i<Nx;++i)
 	{
 		for(j=0;j<Nx;j++)
 		{
-			e = abs(x[Nx*i+j] - u[Nx*i+j]);
+			e = fabs(x[Nx*i+j] - u[Nx*i+j]);
 			if(e > v) v = e;		
 		}
 	}
@@ -231,11 +232,12 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 	Transpose(F, N);
 	for(i=0;i<N;i++) iDST(F[i], N);
 	Transpose(F, N);
-*/	printf("\n  b matrix \n ");
-	print_matrix(b, Nx);
+*/
+//	printf("\n  b matrix \n ");
+//	print_matrix(b, Nx);
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
-	printf("\n dst b matrix \n ");
-	print_matrix(b, Nx);
+//	printf("\n dst b matrix \n ");
+//	print_matrix(b, Nx);
 	transpose(b, Nx);
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
 	transpose(b, Nx);
