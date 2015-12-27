@@ -228,16 +228,7 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 		lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
 	}
 	
-/*	for(i=0;i<N;i++) DST(F[i], N);
-	Transpose(F, N);
-	for(i=0;i<N;i++) iDST(F[i], N);
-	Transpose(F, N);
-*/
-//	printf("\n  b matrix \n ");
-//	print_matrix(b, Nx);
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
-//	printf("\n dst b matrix \n ");
-//	print_matrix(b, Nx);
 	transpose(b, Nx);
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
 	transpose(b, Nx);
@@ -252,15 +243,10 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 			x[Nx*i+j] = -b[Nx*i+j]/(lamda[i] + lamda[j]);
 		}
 	}
-	
-/*	for(i=0;i<N;i++) DST(Xbar[i], N);
-	Transpose(Xbar, N);
-	for(i=0;i<N;i++) iDST(Xbar[i], N);
-*/
+
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	transpose(x, Nx);
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	transpose(x, Nx);
-	
 }
 
