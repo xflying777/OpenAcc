@@ -129,31 +129,29 @@ float Error(float *x, float *u, int Nx)
 	return v;
 }
 
-void expand_data(float *data, float *data2, int Nx, int Ny)
+void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 {
-	// expand data to 2N + 2 length and ready for dst.
-	int i, j;
+	// expand data to 2N + 2 length 
 	#pragma acc loop independent
-	for (i=0;i<Ny;i++)
+	for(int i=0;i<Ny;i++)
 	{
-		data2[Nx*i] = data2[Nx*i+Nx+1] = 0.0;
+		data2[Lx*i] = data2[Lx*i+Nx+1] = 0.0;
 		#pragma acc loop independent
-		for(j=0;i<Nx;i++)
+		for(int j=0;j<Nx;j++)
 		{
-			data2[Nx*i+j+1] = data[Nx*i+j];
-			data2[Nx*i+Nx+2+j] = -1.0*data[Nx*i+Nx-1-j];
+			data2[Lx*i+j+1] = data[Nx*i+j];
+			data2[Lx*i+Nx+j+2] = -1.0*data[Nx*i+Nx-1-j];
 		}
 	}
 }
 
-void expand_idata(float *data2, float *data3, int Lx, int Ny)
+void expand_idata(float *data2, float *data3, int Ny, int Lx)
 {
-	int i, j;
 	#pragma acc loop independent
-	for (i=0;i<Ny;i++)
+	for (int i=0;i<Ny;i++)
 	{
 		#pragma acc loop independent
-		for (j=0;i<Lx;i++)
+		for (int j=0;j<Lx;j++)
 		{
 			data3[2*Lx*i+2*j] = data2[Lx*i+j];
 			data3[2*Lx*i+2*j+1] = 0.0;
@@ -161,10 +159,10 @@ void expand_idata(float *data2, float *data3, int Lx, int Ny)
 	}
 }
 
-extern "C" void cuda_fft(float *d_data, int N, int Ny, void *stream)
+extern "C" void cuda_fft(float *d_data, int Lx, int Ny, void *stream)
 {
 	cufftHandle plan;
-	cufftPlan1d(&plan, N, CUFFT_C2C, Ny);
+	cufftPlan1d(&plan, Lx, CUFFT_C2C, Ny);
 	cufftSetStream(plan, (cudaStream_t)stream);
 	cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
 	cufftDestroy(plan);
@@ -172,14 +170,12 @@ extern "C" void cuda_fft(float *d_data, int N, int Ny, void *stream)
 
 void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
-	int i, j;
 	float s;
-	// Balance the scalar with dst and idst.
 	s = sqrt(2.0/(Nx+1));
 	#pragma acc kernels copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
 	{
-	expand_data(data, data2, Nx, Ny);
-	expand_idata(data2, data3, Lx, Ny);
+		expand_data(data, data2, Nx, Ny, Lx);
+		expand_idata(data2, data3, Ny, Lx);
 	}
 
 	#pragma acc data copy(data3[0:2*Lx*Ny])
@@ -193,14 +189,12 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 	
 	#pragma acc data copy(data[0:Nx*Ny]), copyin(data3[0:2*Lx*Ny])
 	#pragma acc parallel loop independent
-	for(i=0;i<Ny;i++)
+	for (int i=0;i<Ny;i++)
 	{
 		#pragma acc loop independent
-		for(j=0;j<Nx;j++)
-		{
-			data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
-		}
+		for (int j=0;j<Nx;j++)	data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
 	}
+
 }
 
 void transpose(float *A, int N)
