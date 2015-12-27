@@ -21,26 +21,26 @@ void fdst_gpu(float *data, float *data2, float *data3, int N, int L);
 int main()
 {
 	int p, N, L;
-	float *data, *data2, *data3, t1, t2;
+	float *x, *data2, *data3, t1, t2;
 	
 	printf(" Please input p ( N = 2^p - 1 ) = ");
 	scanf("%d",&p);
 	N = Generate_N(p);
 	L = 2*N + 2;
 
-	data = (float *) malloc(N*sizeof(float));
+	x = (float *) malloc(N*sizeof(float));
 	data2 = (float *) malloc(L*sizeof(float));
 	data3 = (float *) malloc(2*L*sizeof(float));
 	
 	Generate_N(p);
-	Initial(data, N);
+	Initial(x, N);
 	
 	t1 = clock();	
-	fdst_gpu(data, data2, data3, N, L);
+	fdst_gpu(x, data2, data3, N, L);
 	t2 = clock();
 
 //	print_vector(data, N);
-	printf(" data[%d] = %f , data[%d] = %f \n", 0, data[0], N-1, data[N-1]);
+	printf(" data[%d] = %f , data[%d] = %f \n", 0, x[0], N-1, x[N-1]);
 	printf(" fdst gpu: %f secs \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 //	print_complex_vector(data3, L);	
 	return 0;

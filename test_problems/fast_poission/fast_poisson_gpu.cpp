@@ -5,6 +5,7 @@ Using cufft to do the discrete sine transform and solve the Poisson equation.
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include <cufft.h>
 #include "openacc.h"
 
@@ -12,11 +13,11 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 void Exact_Solution(float *u, int Nx);
 void Exact_Source(float *b, int Nx);
 float Error(float *x, float *u, int Nx);
-
+void print_matrix(float *x, int N);
 
 int main()
 {
-	int i, p, Nx, Ny, Lx; 
+	int p, Nx, Ny, Lx; 
 	float *x, *u, *b, *data2, *data3;
 	clock_t t1, t2;
 	
@@ -55,10 +56,25 @@ int main()
 	t2 = clock();
 	
 	printf(" Fast Poisson Solver: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
-	printf(" For N = %d error = %e \n", Nx, Error(x, u, Nx));
-	printf(" \n");
+	printf(" For N = %d error = %f \n", Nx, Error(x, u, Nx));
+	
+/*	printf(" \n \n");
+	printf(" u matrix");
+	print_matrix(u, Nx);
+	printf(" \n \n");
+	printf(" x matrix");
+	print_matrix(x, Nx);
+*/	return 0;
+}
+
+void print_matrix(float *x, int N)
+{
+	int i, j;
+	for(i=0;i<N;i++)
+	{
+		printf("\n");
+		for (j=0;j<N;j++) printf(" %f ", x[N*i+j]);
 	}
-	return 0;
 }
 
 void Exact_Solution(float *u, int Nx)
@@ -106,7 +122,7 @@ float Error(float *x, float *u, int Nx)
 	{
 		for(j=0;j<Nx;j++)
 		{
-			e = fabs(x[Nx*i+j] - u[Nx*i+j]);
+			e = abs(x[Nx*i+j] - u[Nx*i+j]);
 			if(e > v) v = e;		
 		}
 	}
@@ -117,7 +133,7 @@ void expand_data(float *data, float *data2, int Nx, int Ny)
 {
 	// expand data to 2N + 2 length and ready for dst.
 	int i, j;
-	#pragma acc parallel loop independent
+	#pragma acc loop independent
 	for (i=0;i<Ny;i++)
 	{
 		data2[Nx*i] = data2[Nx*i+Nx+1] = 0.0;
@@ -133,10 +149,10 @@ void expand_data(float *data, float *data2, int Nx, int Ny)
 void expand_idata(float *data2, float *data3, int Lx, int Ny)
 {
 	int i, j;
-	#pragma acc parallel loop independent
+	#pragma acc loop independent
 	for (i=0;i<Ny;i++)
 	{
-		#pargma acc loop independent
+		#pragma acc loop independent
 		for (j=0;i<Lx;i++)
 		{
 			data3[2*Lx*i+2*j] = data2[Lx*i+j];
@@ -156,11 +172,11 @@ extern "C" void cuda_fft(float *d_data, int N, int Ny, void *stream)
 
 void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
-	int i;
+	int i, j;
 	float s;
 	// Balance the scalar with dst and idst.
 	s = sqrt(2.0/(Nx+1));
-	#pragma acc data copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
+	#pragma acc kernels copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
 	{
 	expand_data(data, data2, Nx, Ny);
 	expand_idata(data2, data3, Lx, Ny);
@@ -172,10 +188,10 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 	#pragma acc host_data use_device(data3)
 	{
 		void *stream = acc_get_cuda_stream(acc_async_sync);
-		cuda_fft(data3, Lx, stream);
+		cuda_fft(data3, Lx, Ny, stream);
 	}
 	
-	#pragma acc data copy(data[0:N]), copyin(data3[0:2*L])
+	#pragma acc data copy(data[0:Nx*Ny]), copyin(data3[0:2*Lx*Ny])
 	#pragma acc parallel loop independent
 	for(i=0;i<Ny;i++)
 	{
@@ -187,7 +203,7 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 	}
 }
 
-void Transpose(float *A, int N)
+void transpose(float *A, int N)
 {
 	int i, j;
 	float v;
@@ -202,7 +218,7 @@ void Transpose(float *A, int N)
 	}
 }
 
-void fast_poisson_solver(float *b, float *x, float *data2, float *data3, int Nx, int Ny, int Lx)
+void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
 	int i, j;
 	float h, *lamda;
@@ -210,7 +226,8 @@ void fast_poisson_solver(float *b, float *x, float *data2, float *data3, int Nx,
 	lamda = (float *) malloc(Nx*sizeof(float));
 	h = 1.0/(Nx+1);
 	
-	#pragma acc kernels data copy(lamda[0:Nx])
+	#pragma acc data copy(lamda[0:Nx])
+	#pragma acc parallel loop independent
 	for(i=0;i<Nx;i++)
 	{
 		lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
@@ -220,11 +237,16 @@ void fast_poisson_solver(float *b, float *x, float *data2, float *data3, int Nx,
 	Transpose(F, N);
 	for(i=0;i<N;i++) iDST(F[i], N);
 	Transpose(F, N);
-*/
+*/	printf("\n  b matrix \n ");
+	print_matrix(b, Nx);
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
-	Transpose(b, Nx);
+	printf("\n dst b matrix \n ");
+	print_matrix(b, Nx);
+	transpose(b, Nx);
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
+	transpose(b, Nx);
 	
+	#pragma acc data copy(x[0:Nx*Ny]), copyin(b[0:Nx*Ny])
 	#pragma acc parallel loop independent
 	for(i=0;i<Ny;i++)
 	{
@@ -240,9 +262,9 @@ void fast_poisson_solver(float *b, float *x, float *data2, float *data3, int Nx,
 	for(i=0;i<N;i++) iDST(Xbar[i], N);
 */
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
-	Transpose(x, Nx);
+	transpose(x, Nx);
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
-	Transpose(x, Nx);
+	transpose(x, Nx);
 	
 }
 
