@@ -12,7 +12,7 @@
 #include "openacc.h"
 
 void Initial(float *data, int Nx, int Ny);
-void print_matrix(float *data, int Nx, Ny);
+void print_matrix(float *data, int Nx, int Ny);
 //void print_complex_vector(float *data, int N);
 void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx);
 
@@ -23,11 +23,13 @@ int main()
 	
 	printf(" Please input ( Nx = 2^p - 1 ) p = ");
 	scanf("%d",&p);
-	Nx = pow(2,p);
+	Nx = pow(2,p) - 1;
+	printf(" Nx = %d \n", Nx);
 	printf(" Please input Ny = ");
-	scanf("%d",Ny);
+	scanf("%d",&Ny);
+	printf(" Ny = %d \n \n", Ny);
 	// Expand the length prepared for discrete sine transform.
-	Lx = 2*N + 2;
+	Lx = 2*Nx + 2;
 
 	x = (float *) malloc(Nx*Ny*sizeof(float));
 	data2 = (float *) malloc(Lx*Ny*sizeof(float));
@@ -37,13 +39,15 @@ int main()
 	printf(" Initial data[%d][%d] \n", Ny, Nx);
 	print_matrix(x, Nx, Ny);
 	
-	t1 = clock();	
-	fdst_gpu(x, data2, data3, N, L);
+	t1 = clock();
+	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
+	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	t2 = clock();
 	
 	printf(" dst data[%d][%d] \n", Ny, Nx);
 	print_matrix(x, Nx, Ny);
 	printf(" fdst 2d in gpu: %f secs \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+
 	return 0;
 }
 
@@ -51,9 +55,10 @@ void print_matrix(float *data, int Nx, int Ny)
 {
 	for (int i=0;i<Ny;i++)
 	{
-		printf("\n");
 		for (int j=0;j<Nx;j++)	printf(" %f ", data[Nx*i+j]);
+		printf(" \n");
 	}
+	printf("\n");
 }
 
 /*void print_complex_vector(float *data, int N)
@@ -69,7 +74,7 @@ void print_matrix(float *data, int Nx, int Ny)
 */
 void Initial(float *data, int Nx, int Ny)
 {	
-	#pragma acc data copy(data[0:N])
+	#pragma acc data copy(data[0:Nx*Ny])
 	#pragma acc parallel loop independent
 	for(int i=0;i<Ny;i++)
 	{
@@ -81,7 +86,7 @@ void Initial(float *data, int Nx, int Ny)
 void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 {
 	// expand data to 2N + 2 length 
-	#pragma acc parallel loop independent
+	#pragma acc loop independent
 	for(int i=0;i<Ny;i++)
 	{
 		data2[Lx*i] = data2[Lx*i+Nx+1] = 0.0;
@@ -96,19 +101,19 @@ void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 
 void expand_idata(float *data2, float *data3, int Ny, int Lx)
 {
-	#pragma acc parallel loop independent
+	#pragma acc loop independent
 	for (int i=0;i<Ny;i++)
 	{
 		#pragma acc loop independent
 		for (int j=0;j<Lx;j++)
 		{
-			data3[2*Lx*i+2*j] = data2[j];
+			data3[2*Lx*i+2*j] = data2[Lx*i+j];
 			data3[2*Lx*i+2*j+1] = 0.0;
 		}
 	}
 }
 
-extern "C" void cuda_fft(float *d_data, int Lx, int, Ny, void *stream)
+extern "C" void cuda_fft(float *d_data, int Lx, int Ny, void *stream)
 {
 	cufftHandle plan;
 	cufftPlan1d(&plan, Lx, CUFFT_C2C, Ny);
@@ -119,7 +124,9 @@ extern "C" void cuda_fft(float *d_data, int Lx, int, Ny, void *stream)
 
 void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
-	#pragma acc data copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
+	float s;
+	s = sqrt(2.0/(Nx+1));
+	#pragma acc kernels copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
 	{
 		expand_data(data, data2, Nx, Ny, Lx);
 		expand_idata(data2, data3, Ny, Lx);
@@ -139,7 +146,7 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 	for (int i=0;i<Ny;i++)
 	{
 		#pragma acc loop independent
-		for (int j=0;j<Nx;j++)	data[Nx*i+j] = -1.0*data3[2*Lx*i+2*j+3]/2;
+		for (int j=0;j<Nx;j++)	data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
 	}
 
 }
