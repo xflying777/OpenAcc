@@ -8,161 +8,241 @@ Using cufft to do the discrete sine transform and solve the Poisson equation.
 #include <cufft.h>
 #include "openacc.h"
 
+void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int Nx, int Ny, int Lx);
+void Exact_Solution(float *u, int Nx);
+void Exact_Source(float *b, int Nx);
+float Error(float *x, float *u, int Nx);
+
+
 int main()
 {
-	int i, N, L; 
-	double *x, *u, *b, *data2, *data3;
+	int i, p, Nx, Ny, Lx; 
+	float *x, *u, *b, *data2, *data3;
 	clock_t t1, t2;
 	
-	N = pow(2, 10) - 1;
+	// Initialize the numbers of discrete points.
+	// Here we consider Nx = Ny. 
+	printf(" Please input (Nx = 2^p - 1) p = ");
+	scanf("%d",&p);
+	Nx = pow(2, p) - 1;
+	Ny = Nx;
+	printf(" Nx = %d \n", Nx);
+	// Prepare the expanded length for discrete sine transform.
+	Lx = 2*Nx + 2 ;
 	// Create memory for solving Ax = b, where r = b-Ax is the residue.
 	// M is the total number of unknowns.
-	L = 2*N + 2 ;
-
 	// Prepare for two dimensional unknown F
 	// where b is the one dimensional vector and 
 	// F[i][j] = F[j+i*(N-1)];
-	b = (double *) malloc(N*N*sizeof(double));
-	x = (double *) malloc(N*N*sizeof(double));
+	b = (float *) malloc(Nx*Ny*sizeof(float));
+	x = (float *) malloc(Nx*Ny*sizeof(float));
 	
-	//data2 : prepare for dst.
-	//data3 : prepare for complex value to data2 and do the cufft. 
-	data2 = (double *) malloc(L*N*sizeof(double));
-	data3 = (double *) malloc(2*L*N*sizeof(double));
+	// data2 : Prepare for dst.
+	// data3 : Prepare for complex value to data2 and do the cufft. 
+	data2 = (float *) malloc(Lx*Ny*sizeof(float));
+	data3 = (float *) malloc(2*Lx*Ny*sizeof(float));
 
 	// Prepare for two dimensional unknowns U
 	// where u is the one dimensional vector and
 	// U[i][j] = u[j+i*(N-1)] 
-	u = (double *) malloc(L2*sizeof(double));
+	u = (float *) malloc(Nx*Ny*sizeof(float));
 		
-	Exact_Solution(u, N);
-	Exact_Source(b, N);
+	Exact_Solution(u, Nx);
+	Exact_Source(b, Nx);
 	
 	t1 = clock();
-	Fast_Poisson_Solver(F, X, L);
+	fast_poisson_solver_gpu(b, x, data2, data3, Nx, Ny, Lx);
 	t2 = clock();
 	
 	printf(" Fast Poisson Solver: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
-	printf(" For N = %d error = %e \n", N, Error(X, U, L));
+	printf(" For N = %d error = %e \n", Nx, Error(x, u, Nx));
 	printf(" \n");
 	}
 	return 0;
 }
 
-void Exact_Solution(double *u, int N)
+void Exact_Solution(float *u, int Nx)
 {
 	// put the exact solution 
 	int i, j;
-	double x, y, h;
-	h = 1.0/(N+1);
-	for(i=0;i<N;++i)
+	float x, y, h;
+	h = 1.0/(Nx+1);
+	for(i=0;i<Nx;++i)
 	{
 		x = (i + 1)*h;
-		for(j=0;j<N;++j)
+		for(j=0;j<Nx;++j)
 		{
 			//k = j + i*(N-1);
 			y = (j + 1)*h;
-			u[N*i+j] = sin(M_PI*x)*sin(2*M_PI*y);
+			u[Nx*i+j] = sin(M_PI*x)*sin(2*M_PI*y);
 		}
 	}
 }
 
-void Exact_Source(double *b, int N)
+void Exact_Source(float *b, int Nx)
 {
 	int i,j;
-	double x, y, h;
-	h = 1.0/(N+1);
-	for(i=0;i<N;++i)
+	float x, y, h;
+	h = 1.0/(Nx+1);
+	for(i=0;i<Nx;++i)
 	{
 		x = (i+1)*h;
-		for(j=0;j<N;++j)
+		for(j=0;j<Nx;++j)
 		{
 			//k = j + i*(N-1);
 			y = (j+1)*h;
-			b[N*i+j] = -(1.0+4.0)*h*h*M_PI*M_PI*sin(M_PI*x)*sin(2*M_PI*y);
+			b[Nx*i+j] = -(1.0+4.0)*h*h*M_PI*M_PI*sin(M_PI*x)*sin(2*M_PI*y);
 		}
 	}	
 }
 
-double Error(double *x, double *u, int N)
+float Error(float *x, float *u, int Nx)
 {
 	// return max_i |x[i] - u[i]|
 	int i, j;
-	double v = 0.0, e;
+	float v = 0.0, e;
 	
-	for(i=0;i<N;++i)
+	for(i=0;i<Nx;++i)
 	{
-		for(j=0;j<N;j++)
+		for(j=0;j<Nx;j++)
 		{
-			e = fabs(x[N*i+j] - u[N*i+j]);
+			e = fabs(x[Nx*i+j] - u[Nx*i+j]);
 			if(e > v) v = e;		
 		}
 	}
 	return v;
 }
 
-void expand_data(float *data, float *data2, int N)
+void expand_data(float *data, float *data2, int Nx, int Ny)
 {
 	// expand data to 2N + 2 length and ready for dst.
 	int i, j;
-	#pragma acc loop independent
-	for (i=0;i<N;i++)
+	#pragma acc parallel loop independent
+	for (i=0;i<Ny;i++)
 	{
-		data2[N*i] = data2[N*i+N+1] = 0.0;
-		for(j=0;i<N;i++)
+		data2[Nx*i] = data2[Nx*i+Nx+1] = 0.0;
+		#pragma acc loop independent
+		for(j=0;i<Nx;i++)
 		{
-			data2[N*i+j+1] = data[N*i+j];
-			data2[N*i+N+2+j] = -1.0*data[N*i+N-1-j];
+			data2[Nx*i+j+1] = data[Nx*i+j];
+			data2[Nx*i+Nx+2+j] = -1.0*data[Nx*i+Nx-1-j];
 		}
 	}
 }
 
-void expand_idata(float *data2, float *data3, int N, int L)
+void expand_idata(float *data2, float *data3, int Lx, int Ny)
 {
 	int i, j;
-	#pragma acc loop independent
-	for (i=0;i<N;i++)
+	#pragma acc parallel loop independent
+	for (i=0;i<Ny;i++)
 	{
-		for (j=0;i<L;i++)
+		#pargma acc loop independent
+		for (j=0;i<Lx;i++)
 		{
-			data3[2*L*i+2*j] = data2[L*i+j];
-			data3[2*L*i+2*j+1] = 0.0;
+			data3[2*Lx*i+2*j] = data2[Lx*i+j];
+			data3[2*Lx*i+2*j+1] = 0.0;
 		}
 	}
 }
 
-extern "C" void cuda_fft(float *d_data, int N, void *stream)
+extern "C" void cuda_fft(float *d_data, int N, int Ny, void *stream)
 {
 	cufftHandle plan;
-	cufftPlan1d(&plan, N, CUFFT_C2C, 1);
+	cufftPlan1d(&plan, N, CUFFT_C2C, Ny);
 	cufftSetStream(plan, (cudaStream_t)stream);
 	cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
 	cufftDestroy(plan);
 }
 
-void fdst_gpu(float *data, float *data2, float *data3, int N, int L, int L2)
+void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
 	int i;
-	#pragma acc kernels copyin(data[0:N]), create(data2[0:L]), copy(data3[0:2*L])
+	float s;
+	// Balance the scalar with dst and idst.
+	s = sqrt(2.0/(Nx+1));
+	#pragma acc data copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
 	{
-	expand_data(data, data2, N);
-	expand_idata(data2, data3, N, L, L2);
+	expand_data(data, data2, Nx, Ny);
+	expand_idata(data2, data3, Lx, Ny);
 	}
 
-	#pragma acc data copy(data3[0:2*L])
+	#pragma acc data copy(data3[0:2*Lx*Ny])
 	// Copy data to device at start of region and back to host and end of region
 	// Inside this region the device data pointer will be used
 	#pragma acc host_data use_device(data3)
 	{
 		void *stream = acc_get_cuda_stream(acc_async_sync);
-		cuda_fft(data3, L, stream);
+		cuda_fft(data3, Lx, stream);
 	}
 	
 	#pragma acc data copy(data[0:N]), copyin(data3[0:2*L])
 	#pragma acc parallel loop independent
-	for(i=0;i<N;i++)
+	for(i=0;i<Ny;i++)
 	{
-		data[i] = -1.0*data3[2*i+3]/2;
+		#pragma acc loop independent
+		for(j=0;j<Nx;j++)
+		{
+			data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
+		}
 	}
-
 }
+
+void Transpose(float *A, int N)
+{
+	int i, j;
+	float v;
+	for(i=0;i<N;++i)
+	{
+		for(j=i+1;j<N;++j)
+		{
+			v = A[N*i+j];
+			A[N*i+j] = A[N*j+i];
+			A[N*j+i] = v;
+		}
+	}
+}
+
+void fast_poisson_solver(float *b, float *x, float *data2, float *data3, int Nx, int Ny, int Lx)
+{
+	int i, j;
+	float h, *lamda;
+	
+	lamda = (float *) malloc(Nx*sizeof(float));
+	h = 1.0/(Nx+1);
+	
+	#pragma acc kernels data copy(lamda[0:Nx])
+	for(i=0;i<Nx;i++)
+	{
+		lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
+	}
+	
+/*	for(i=0;i<N;i++) DST(F[i], N);
+	Transpose(F, N);
+	for(i=0;i<N;i++) iDST(F[i], N);
+	Transpose(F, N);
+*/
+	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
+	Transpose(b, Nx);
+	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
+	
+	#pragma acc parallel loop independent
+	for(i=0;i<Ny;i++)
+	{
+		#pragma acc loop independent
+		for(j=0;j<Nx;j++) 
+		{
+			x[Nx*i+j] = -b[Nx*i+j]/(lamda[i] + lamda[j]);
+		}
+	}
+	
+/*	for(i=0;i<N;i++) DST(Xbar[i], N);
+	Transpose(Xbar, N);
+	for(i=0;i<N;i++) iDST(Xbar[i], N);
+*/
+	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
+	Transpose(x, Nx);
+	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
+	Transpose(x, Nx);
+	
+}
+
