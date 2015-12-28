@@ -132,8 +132,9 @@ float Error(float *x, float *u, int Nx)
 
 void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 {
-	// expand data to 2N + 2 length 
-	#pragma acc loop independent
+	// expand data to 2N + 2 length
+	#pragma acc data copyin(data[0:Nx*Ny]), copyout(data2[0:Lx*Ny]) 
+	#pragma acc parallel loop independent
 	for(int i=0;i<Ny;i++)
 	{
 		data2[Lx*i] = data2[Lx*i+Nx+1] = 0.0;
@@ -146,9 +147,10 @@ void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 	}
 }
 
-void expand_idata(float *data2, float *data3, int Ny, int Lx)
+void expand_idata(float *data2, float *data3, int Nx, int Ny, int Lx)
 {
-	#pragma acc loop independent
+	#pragma acc data copyin(data2[0:Lx*Ny]), copyout(data3[0:2*Lx*Ny])
+	#pragma acc parallel loop independent
 	for (int i=0;i<Ny;i++)
 	{
 		#pragma acc loop independent
@@ -173,11 +175,9 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
 	float s;
 	s = sqrt(2.0/(Nx+1));
-	#pragma acc kernels copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
-	{
-		expand_data(data, data2, Nx, Ny, Lx);
-		expand_idata(data2, data3, Ny, Lx);
-	}
+
+	expand_data(data, data2, Nx, Ny, Lx);
+	expand_idata(data2, data3, Nx, Ny, Lx);
 
 	#pragma acc data copy(data3[0:2*Lx*Ny])
 	// Copy data to device at start of region and back to host and end of region
@@ -188,7 +188,7 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 		cuda_fft(data3, Lx, Ny, stream);
 	}
 	
-	#pragma acc data copy(data[0:Nx*Ny]), copyin(data3[0:2*Lx*Ny])
+	#pragma acc data copyin(data3[0:2*Lx*Ny]), copyout(data[0:Nx*Ny])
 	#pragma acc parallel loop independent
 	for (int i=0;i<Ny;i++)
 	{
@@ -198,17 +198,17 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 
 }
 
-void transpose(float *A, int N)
+void transpose(float *data_in, float *data_out, int Nx, int Ny)
 {
 	int i, j;
-	float v;
-	for(i=0;i<N;++i)
+	#pragma acc data copyin(data_in[0:Nx*Ny]), copyout(data_out[0:Ny*Nx])
+	#pragma acc parallel loop independent
+	for(i=0;i<Ny;i++)
 	{
-		for(j=i+1;j<N;++j)
+		#pragma acc loop independent
+		for(j=0;j<Nx;j++)
 		{
-			v = A[N*i+j];
-			A[N*i+j] = A[N*j+i];
-			A[N*j+i] = v;
+			data_out[i+j*Ny] = data_in[i*Nx+j];
 		}
 	}
 }
@@ -216,12 +216,13 @@ void transpose(float *A, int N)
 void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
 	int i, j;
-	float h, *lamda;
+	float h, *lamda, *temp;
 	
+	temp = (float *) malloc(Nx*Ny*sizeof(float));
 	lamda = (float *) malloc(Nx*sizeof(float));
 	h = 1.0/(Nx+1);
 	
-	#pragma acc data copy(lamda[0:Nx])
+	#pragma acc data copyout(lamda[0:Nx])
 	#pragma acc parallel loop independent
 	for(i=0;i<Nx;i++)
 	{
@@ -229,11 +230,11 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 	}
 	
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
-	transpose(b, Nx);
-	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
-	transpose(b, Nx);
+	transpose(b, temp, Nx, Ny);
+	fdst_gpu(temp, data2, data3, Nx, Ny, Lx);
+	transpose(temp, b, Ny, Nx);
 	
-	#pragma acc data copy(x[0:Nx*Ny]), copyin(b[0:Nx*Ny])
+	#pragma acc data copyin(b[0:Nx*Ny]), copyout(x[0:Nx*Ny])
 	#pragma acc parallel loop independent
 	for(i=0;i<Ny;i++)
 	{
@@ -245,8 +246,8 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 	}
 
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
-	transpose(x, Nx);
-	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
-	transpose(x, Nx);
+	transpose(x, temp, Nx, Ny);
+	fdst_gpu(temp, data2, data3, Nx, Ny, Lx);
+	transpose(temp, x, Ny, Nx);
 }
 

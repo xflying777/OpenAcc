@@ -64,6 +64,13 @@ int main()
 	transpose(a, b, Nx, Ny);
 	t3 = clock();
 
+	printf(" b matrix \n");
+	print_matrix(b, Ny, Nx);
+
+	transpose(b, a, Ny, Nx);
+	printf(" a matrix \n");
+	print_matrix(a, Nx, Ny);
+
 	printf(" Initialization time = %f \n",1.0*(t2-t1)/CLOCKS_PER_SEC);
 	printf(" Transpose time = %f \n",1.0*(t3-t2)/CLOCKS_PER_SEC);
 	printf(" Total time = %f \n",1.0*(t3-t1)/CLOCKS_PER_SEC);

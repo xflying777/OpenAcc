@@ -36,16 +36,16 @@ int main()
 	data3 = (float *) malloc(2*Lx*Ny*sizeof(float));
 	
 	Initial(x, Nx, Ny);
-	printf(" Initial data[%d][%d] \n", Ny, Nx);
-	print_matrix(x, Nx, Ny);
+//	printf(" Initial data[%d][%d] \n", Ny, Nx);
+//	print_matrix(x, Nx, Ny);
 	
 	t1 = clock();
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	t2 = clock();
 	
-	printf(" dst data[%d][%d] \n", Ny, Nx);
-	print_matrix(x, Nx, Ny);
+//	printf(" dst data[%d][%d] \n", Ny, Nx);
+//	print_matrix(x, Nx, Ny);
 	printf(" fdst 2d in gpu: %f secs \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 
 	return 0;

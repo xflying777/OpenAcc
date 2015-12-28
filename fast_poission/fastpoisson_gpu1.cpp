@@ -221,7 +221,7 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 	lamda = (float *) malloc(Nx*sizeof(float));
 	h = 1.0/(Nx+1);
 	
-	#pragma acc data copy(lamda[0:Nx])
+	#pragma acc data copyout(lamda[0:Nx])
 	#pragma acc parallel loop independent
 	for(i=0;i<Nx;i++)
 	{
@@ -233,7 +233,7 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 	fdst_gpu(b, data2, data3, Nx, Ny, Lx);
 	transpose(b, Nx);
 	
-	#pragma acc data copy(x[0:Nx*Ny]), copyin(b[0:Nx*Ny])
+	#pragma acc data copyout(x[0:Nx*Ny]), copyin(b[0:Nx*Ny])
 	#pragma acc parallel loop independent
 	for(i=0;i<Ny;i++)
 	{
