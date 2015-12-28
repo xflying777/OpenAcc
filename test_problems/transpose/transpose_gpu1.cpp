@@ -16,26 +16,16 @@ void initial(float *data, int Nx, int Ny)
 	}	
 }
 
-void transpose(float *data, int Nx, int Ny)
+void transpose(float *data_in, float *data_out, int Nx, int Ny)
 {
 	int i, j;
-	float *temp;
-	temp = (float *)malloc(Nx*Ny*sizeof(float));
-	
-	#pragma acc data create(temp[0:Nx*Ny]), copyin(data[0:Nx*Ny])
-	#pragma acc loop independent
-	for(i=0;i<Nx*Ny;i++)
-	{
-		temp[i] = data[i];
-	}
-	
 	#pragma acc loop independent
 	for (i=0; i<Ny; i++)
 	{
 		#pragma acc loop independent
 		for (j=0; j<Nx; j++)
 		{
-			data[i+j*Ny] = temp[Nx*i+j]; 
+			data_out[i+j*Ny] = data_in[Nx*i+j]; 
 		}
 	}
 	
@@ -54,7 +44,7 @@ void print_matrix(float *x, int Nx, int Ny)
 int main()
 {
 	int Nx, Ny;
-	float *a;
+	float *a, *b, t1, t2, t3, t4;
 	
 	printf(" Please input Nx = \n");
 	scanf("%d",&Nx);
@@ -64,17 +54,28 @@ int main()
 	printf(" Ny = %d \n", Ny);
 	
 	a = (float *)malloc(Nx*Ny*sizeof(float));
+	b = (float *)malloc(Nx*Ny*sizeof(float));
 	
+	t1 = clock();
 	#pragma acc kernels copy(a[0:Nx*Ny])
 	initial(a, Nx, Ny);
-	printf(" Initial data[%d][%d] \n", Ny, Nx);
-	print_matrix(a, Nx, Ny);
+	t2 = clock();
+
+//	printf(" Initial data[%d][%d] \n", Ny, Nx);
+//	print_matrix(a, Nx, Ny);
 	
-	#pragma acc kernels copy(a[0:Nx*Ny])
-	transpose(a, Nx, Ny);
-	printf(" Initial data[%d][%d] \n", Nx, Ny);
-	print_matrix(a, Ny, Nx);
+	t3 = clock();
+	#pragma acc kernels copyin(a[0:Nx*Ny]), copyout(b[0:Nx*Ny])
+	transpose(a, b, Nx, Ny);
+	t4 = clock();
+
+//	printf(" Initial data[%d][%d] \n", Nx, Ny);
+//	print_matrix(a, Ny, Nx);
 	
+	printf(" Initialization time = %f \n",1.0*(t2-t1)/CLOCKS_PER_SEC);
+	printf(" Transpose time = %f \n",1.0*(t4-t3)/CLOCKS_PER_SEC);
+	printf(" Communication time = %f \n",1.0*((t4-t1)-(t3-t2))/CLOCKS_PER_SEC);
+
 	return 0;
 }
 
