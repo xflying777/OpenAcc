@@ -37,17 +37,13 @@ int main()
 	
 	Initial(x, Nx, Ny);
 	printf(" Initial data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], x[Ny*Nx-1]);
-//	printf(" Initial data[%d][%d] \n", Ny, Nx);
-//	print_matrix(x, Nx, Ny);
 	
 	t1 = clock();
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	t2 = clock();
-
-	printf(" Double dst data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], x[Ny*Nx-1]);	
-//	printf(" dst data[%d][%d] \n", Ny, Nx);
-//	print_matrix(x, Nx, Ny);
+	printf(" Double dst data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], x[Ny*Nx-1]);
+	
 	printf(" fdst 2d in gpu: %f secs \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 
 	return 0;
@@ -63,17 +59,6 @@ void print_matrix(float *data, int Nx, int Ny)
 	printf("\n");
 }
 
-/*void print_complex_vector(float *data, int N)
-{
-        int i;
-        for(i=0;i<N;i++)
-        {
-                if (data[2*i+1] >= 0) printf("%d : %f +%f i\n", i, data[2*i], data[2*i+1]);
-                else printf("%d : %f %f i\n", i, data[2*i], data[2*i+1]);
-        }
-
-}
-*/
 void Initial(float *data, int Nx, int Ny)
 {	
 	#pragma acc data copy(data[0:Nx*Ny])
@@ -88,7 +73,7 @@ void Initial(float *data, int Nx, int Ny)
 void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 {
 	// expand data to 2N + 2 length 
-	#pragma acc loop independent
+	#pragma acc parallel loop independent
 	for(int i=0;i<Ny;i++)
 	{
 		data2[Lx*i] = data2[Lx*i+Nx+1] = 0.0;
@@ -103,7 +88,7 @@ void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 
 void expand_idata(float *data2, float *data3, int Ny, int Lx)
 {
-	#pragma acc loop independent
+	#pragma acc parallel loop independent
 	for (int i=0;i<Ny;i++)
 	{
 		#pragma acc loop independent
@@ -128,28 +113,25 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 {
 	float s;
 	s = sqrt(2.0/(Nx+1));
-	#pragma acc kernels copyin(data[0:Nx*Ny]), create(data2[0:Lx*Ny]), copy(data3[0:2*Lx*Ny])
+	#pragma acc data copy(data[0:Nx*Ny], data3[0:2*Lx*Ny]), create(data2[0:Lx*Ny])
 	{
 		expand_data(data, data2, Nx, Ny, Lx);
 		expand_idata(data2, data3, Ny, Lx);
-	}
 
-	#pragma acc data copy(data3[0:2*Lx*Ny])
-	// Copy data to device at start of region and back to host and end of region
-	// Inside this region the device data pointer will be used
-	#pragma acc host_data use_device(data3)
-	{
-		void *stream = acc_get_cuda_stream(acc_async_sync);
-		cuda_fft(data3, Lx, Ny, stream);
+		// Copy data to device at start of region and back to host and end of region
+		// Inside this region the device data pointer will be used
+		#pragma acc host_data use_device(data3)
+		{
+			void *stream = acc_get_cuda_stream(acc_async_sync);
+			cuda_fft(data3, Lx, Ny, stream);
+		}
+		
+		#pragma acc parallel loop independent
+		for (int i=0;i<Ny;i++)
+		{
+			#pragma acc loop independent
+			for (int j=0;j<Nx;j++)	data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
+		}
 	}
-	
-	#pragma acc data copy(data[0:Nx*Ny]), copyin(data3[0:2*Lx*Ny])
-	#pragma acc parallel loop independent
-	for (int i=0;i<Ny;i++)
-	{
-		#pragma acc loop independent
-		for (int j=0;j<Nx;j++)	data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
-	}
-
 }
 
