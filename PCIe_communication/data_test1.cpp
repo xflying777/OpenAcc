@@ -17,7 +17,7 @@ void operation_cpu(float *a, float *b, float *c, int N);
 
 int main()
 {
-	int N, i;
+	int N;
 	float *a, *b, *c_cpu, *c_gpu;
 	clock_t t1, t2;
 	
@@ -36,7 +36,7 @@ int main()
 	
 	t1 = clock();
 	operation_gpu(a, b, c_gpu, N);
-	t1 = clock();
+	t2 = clock();
 	printf(" gpu times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 	
 	printf(" error = %f \n", error(c_cpu, c_gpu, N));	
