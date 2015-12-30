@@ -13,7 +13,6 @@
 
 void Initial(float *data, int Nx, int Ny);
 void print_matrix(float *data, int Nx, int Ny);
-//void print_complex_vector(float *data, int N);
 void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx);
 
 int main()
@@ -63,17 +62,6 @@ void print_matrix(float *data, int Nx, int Ny)
 	printf("\n");
 }
 
-/*void print_complex_vector(float *data, int N)
-{
-        int i;
-        for(i=0;i<N;i++)
-        {
-                if (data[2*i+1] >= 0) printf("%d : %f +%f i\n", i, data[2*i], data[2*i+1]);
-                else printf("%d : %f %f i\n", i, data[2*i], data[2*i+1]);
-        }
-
-}
-*/
 void Initial(float *data, int Nx, int Ny)
 {	
 	#pragma acc data copy(data[0:Nx*Ny])
@@ -143,7 +131,7 @@ void fdst_gpu(float *data, float *data2, float *data3, int Nx, int Ny, int Lx)
 		cuda_fft(data3, Lx, Ny, stream);
 	}
 	
-	#pragma acc data copy(data[0:Nx*Ny]), copyin(data3[0:2*Lx*Ny])
+	#pragma acc data copyout(data[0:Nx*Ny]), copyin(data3[0:2*Lx*Ny])
 	#pragma acc parallel loop independent
 	for (int i=0;i<Ny;i++)
 	{
