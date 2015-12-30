@@ -36,13 +36,13 @@ int main()
 	data3 = (float *) malloc(2*Lx*Ny*sizeof(float));
 	
 	Initial(x, Nx, Ny);
-	printf(" Initial data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], x[Ny*Nx-1]);
+	printf(" Initial data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], Ny, Nx, x[Ny*Nx-1]);
 	
 	t1 = clock();
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	fdst_gpu(x, data2, data3, Nx, Ny, Lx);
 	t2 = clock();
-	printf(" Double dst data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], x[Ny*Nx-1]);
+	printf(" Double dst data[%d][%d] = %f, data[%d][%d] = %f \n", 0, 0, x[0], Ny, Nx, x[Ny*Nx-1]);
 	
 	printf(" fdst 2d in gpu: %f secs \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 
@@ -72,7 +72,8 @@ void Initial(float *data, int Nx, int Ny)
 
 void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 {
-	// expand data to 2N + 2 length 
+	// expand data to 2N + 2 length
+	#pragma acc data copyin(data[0:Nx*Ny]), copyout(data2[0:Lx*Ny]) 
 	#pragma acc parallel loop independent
 	for(int i=0;i<Ny;i++)
 	{
@@ -88,6 +89,7 @@ void expand_data(float *data, float *data2, int Nx, int Ny, int Lx)
 
 void expand_idata(float *data2, float *data3, int Ny, int Lx)
 {
+	#pragma acc data copyin(data2[0:Lx*Ny]), copyout(data3[0:2*Lx*Ny])
 	#pragma acc parallel loop independent
 	for (int i=0;i<Ny;i++)
 	{
