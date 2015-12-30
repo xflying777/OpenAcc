@@ -217,24 +217,26 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 {
 	int i, j;
 	float h, *lamda, *temp;
-	
+
 	temp = (float *) malloc(Nx*Ny*sizeof(float));
 	lamda = (float *) malloc(Nx*sizeof(float));
 	h = 1.0/(Nx+1);
-	
-	#pragma acc data copyout(lamda[0:Nx])
+
+	#pragma acc data copyin(b[0:Nx*Ny]), copyout(x[0:Nx*Ny]), create(data2[0:Lx*Ny], data3[0:2*Lx*Ny], temp[0:Nx*Ny], lamda[0:Nx])
+	{
+//		#pragma acc data copyout(lamda[0:Nx])
 		#pragma acc parallel loop independent
 		for(i=0;i<Nx;i++)
 		{
 			lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
 		}
-	
+
 		fdst_gpu(b, data2, data3, Nx, Ny, Lx);
 		transpose(b, temp, Nx, Ny);
 		fdst_gpu(temp, data2, data3, Nx, Ny, Lx);
 		transpose(temp, b, Ny, Nx);
-	
-		#pragma acc data copyin(b[0:Nx*Ny]), copyout(x[0:Nx*Ny])
+
+//		#pragma acc data copyin(b[0:Nx*Ny]), copyout(x[0:Nx*Ny])
 		#pragma acc parallel loop independent
 		for(i=0;i<Ny;i++)
 		{
@@ -249,5 +251,6 @@ void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int
 		transpose(x, temp, Nx, Ny);
 		fdst_gpu(temp, data2, data3, Nx, Ny, Lx);
 		transpose(temp, x, Ny, Nx);
+	}
 }
 
