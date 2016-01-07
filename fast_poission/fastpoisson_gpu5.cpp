@@ -72,30 +72,30 @@ int main()
 
 void print_matrix(float *x, int N) 
 { 
-   int i, j; 
-   for(i=0;i<N;i++) 
-   { 
-      for (j=0;j<N;j++) printf(" %f ", x[N*i+j]); 
-      printf("\n"); 
-   } 
+	int i, j; 
+   	for(i=0;i<N;i++) 
+   	{
+      		for (j=0;j<N;j++) printf(" %f ", x[N*i+j]); 
+      		printf("\n"); 
+   	}
 } 
 
 void Exact_Solution(float *u, int Nx) 
 { 
-   // put the exact solution 
-   int i, j; 
-   float x, y, h; 
-   h = 1.0/(Nx+1); 
-   for(i=0;i<Nx;++i) 
-   { 
-      x = (i + 1)*h; 
-      for(j=0;j<Nx;++j) 
-      { 
-         //k = j + i*(N-1); 
-         y = (j + 1)*h; 
-         u[Nx*i+j] = sin(M_PI*x)*sin(2*M_PI*y); 
-      } 
-   } 
+	// put the exact solution 
+   	int i, j; 
+   	float x, y, h; 
+   	h = 1.0/(Nx+1); 
+   	for(i=0;i<Nx;++i) 
+   	{ 
+      		x = (i + 1)*h; 
+      		for(j=0;j<Nx;++j) 
+      		{ 
+         		//k = j + i*(N-1); 
+         		y = (j + 1)*h; 
+         		u[Nx*i+j] = sin(M_PI*x)*sin(2*M_PI*y); 
+      		} 
+   	} 
 } 
 
 void Exact_Source(float *b, int Nx) 
@@ -129,8 +129,8 @@ float Error(float *x, float *u, int Nx)
 		for(j=0;j<Nx;j++) 
 		{ 
 			e = fabs(x[Nx*i+j] - u[Nx*i+j]); 
-//			if(e > v) v = e;
-			v = max(v, e); 
+			if(e > v) v = e;
+			//v = max(v, e); 
 		} 
 	} 
 	return v; 
