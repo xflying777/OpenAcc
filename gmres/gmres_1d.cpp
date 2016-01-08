@@ -170,7 +170,14 @@ float inner_product(float *data1, float data2, int Nx)
 	return value;
 }
 
-float vector_shift(float *data, float)
+void vector_shift(float *x, float a, float *y, int Nx)
+{
+	int i;
+	for(i=0; i<Nx; i++)
+	{
+		x[i] = x[i] - a*y[i];
+	}
+}
 void gmres(float *A, float *x, float *b, int Nx)
 {
 	int i, j, iter;
@@ -194,7 +201,8 @@ void gmres(float *A, float *x, float *b, int Nx)
 		{
 			vector_subQ(Q, temp, Nx, j);
 			H[Nx*j + iter] = inner_product(temp, v);
-			
+			vector_shift(v, a, temp, Nx);
 		}
+		H[Nx*(iter+1) + j]
 	} 
 }
