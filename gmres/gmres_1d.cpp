@@ -81,8 +81,9 @@ void Exact_Source(float *b, int Nx)
 void A_matrix(float *A, int Nx)
 {
 	int i, j;
-	float h;
+	float h, h2;
 	h = 1/(Nx+1);
+	h2 = h*h;
 	for(i=0; i<Nx; i++)
 	{
 		for(j=0; j<Nx; j++)
@@ -93,13 +94,40 @@ void A_matrix(float *A, int Nx)
 	
 	for(i=0; i<Nx; i++)
 	{
-		A[Nx*i+i] = 2.0;
+		A[Nx*i+i] = 2.0/h2;
 	}
 	
 	for(i=0; i<Nx-1; i++)
 	{
-		A[Nx*(i+1)+i] = -1.0;
-		A[Nx*i+(i+1)] = -1.0;
+		A[Nx*(i+1)+i] = -1.0/h2;
+		A[Nx*i+(i+1)] = -1.0/h2;
+	}
+}
+
+void Q_subvector(float *Q, float *v, int Nx, int num_row)
+{
+	int i;
+	for(i=0; i<Nx; i++)
+	{
+		Q[Nx*num_row + i] = v[i];
+	}
+}
+
+void vector_subQ(float Q, float v, int Nx, int num_row)
+{
+	int i;
+	for(i=0; i<Nx; i++)
+	{
+		v[i] = Q[Nx*num_row + i];
+	}
+}
+
+void Q_subnormal(float *Q, float norm, int Nx, int num_row)
+{
+	int i;
+	for(i=0; i<Nx; i++)
+	{
+		Q[Nx*num_row + i] = Q[Nx*num_row + i]/norm;
 	}
 }
 
@@ -130,32 +158,28 @@ void matrix_vector(float *A, float *data_in, float data_out, int Nx)
 	}
 }
 
-void Q_subvector(float *Q, float *v, int Nx, int num_row)
+float inner_product(float *data1, float data2, int Nx)
 {
 	int i;
+	float value;
+	value = 0.0;
 	for(i=0; i<Nx; i++)
 	{
-		Q[Nx*num_row + i] = v[i];
+		value += data1[i]*data2[i];
 	}
+	return value;
 }
 
-void Q_subnormal(float *Q, float norm, int Nx, int num_row)
-{
-	int i;
-	for(i=0; i<Nx; i++)
-	{
-		Q[Nx*num_row + i] = Q[Nx*num_row + i]/norm;
-	}
-}
-
+float vector_shift(float *data, float)
 void gmres(float *A, float *x, float *b, int Nx)
 {
 	int i, j, iter;
 	float beta, h;
-	float *Q, *H, *v;
+	float *Q, *H, *v, *temp;
 	
 	Q = (float *) malloc(Nx*(Nx+1)*sizeof(float));
 	H = (float *) malloc((Nx+1)*Nx*sizeof(float));
+	temp = (float *) malloc(Nx*sizeof(float));
 	
 	h = 1/(Nx+1);
 	beta = norm(b, Nx);
@@ -164,6 +188,13 @@ void gmres(float *A, float *x, float *b, int Nx)
 	
 	for(iter=0; iter<Nx; iter++)
 	{
-		
+		vector_subQ(Q, temp, Nx, iter);
+		matrix_vector(A, temp, v, Nx);
+		for(j=0; j<iter+1; j++)
+		{
+			vector_subQ(Q, temp, Nx, j);
+			H[Nx*j + iter] = inner_product(temp, v);
+			
+		}
 	} 
 }
