@@ -16,11 +16,13 @@ void Exact_Solution(float *u, int Nx);
 void Exact_Source(float *b, int Nx);
 void A_matrix(float *A, int Nx);
 float norm(float *x, int Nx);
+float error(float *x, float *y, int Nx);
+void gmres(float *A, float *x, float *b, int Nx, float tol);
 
 int main()
 {
 	int p, Nx; 
-	float *u, *A, *x, *b;
+	float *u, *A, *x, *b, tol;
 	clock_t t1, t2;
 	
 	// Initialize the numbers of discrete points.
@@ -35,11 +37,13 @@ int main()
 	x = (float *) malloc(Nx*sizeof(float));
 	u = (float *) malloc(Nx*sizeof(float));
 	
+	tol = 1.0e-6;
+	Exact_Solution(u, Nx);
+	Exact_Source(b, Nx);
 	A_matrix(A, Nx);
-	printf(" A = \n");
-	print_matrix(A, Nx);
-	printf(" norm(A) = %f \n", norm(A, Nx*Nx));
+	gmres(A, x, b, Nx, tol);
 	
+	printf(" error = %f \n", error(x, u, Nx));	
 	return 0;
 	
 }
@@ -52,13 +56,14 @@ void print_matrix(float *x, int N)
 		for (j=0;j<N;j++) printf(" %f ", x[N*i+j]);
 		printf("\n");
 	}
+	printf("\n");
 }
 
 void Exact_Solution(float *u, int Nx)
 {
 	int i;
 	float h, x;
-	h = 1/(Nx+1);
+	h = M_PI/(Nx+1);
 	for(i=0; i<Nx; i++)
 	{
 		x = (1+i)*h;
@@ -70,7 +75,7 @@ void Exact_Source(float *b, int Nx)
 {
 	int i;
 	float h, x;
-	h = 1/(Nx+1);
+	h = M_PI/(Nx+1);
 	for(i=0; i<Nx; i++)
 	{
 		x = (1+i)*h;
@@ -78,11 +83,24 @@ void Exact_Source(float *b, int Nx)
 	}
 }
 
+float error(float *x, float *y, int Nx)
+{
+	int i;
+	float error, temp;
+	error = 0.0;
+	for(i=0; i<Nx; i++)
+	{
+		temp = abs(x[i] - y[i]);
+		if(temp > error) error = temp;
+	}
+	return error;
+}
+
 void A_matrix(float *A, int Nx)
 {
 	int i, j;
 	float h, h2;
-	h = 1/(Nx+1);
+	h = M_PI/(Nx+1);
 	h2 = h*h;
 	for(i=0; i<Nx; i++)
 	{
@@ -94,13 +112,13 @@ void A_matrix(float *A, int Nx)
 	
 	for(i=0; i<Nx; i++)
 	{
-		A[Nx*i+i] = 2.0/h2;
+		A[Nx*i+i] = -2.0/h2;
 	}
 	
 	for(i=0; i<Nx-1; i++)
 	{
-		A[Nx*(i+1)+i] = -1.0/h2;
-		A[Nx*i+(i+1)] = -1.0/h2;
+		A[Nx*(i+1)+i] = 1.0/h2;
+		A[Nx*i+(i+1)] = 1.0/h2;
 	}
 }
 
@@ -113,7 +131,7 @@ void Q_subvector(float *Q, float *v, int Nx, int num_row)
 	}
 }
 
-void vector_subQ(float Q, float v, int Nx, int num_row)
+void vector_subQ(float *Q, float *v, int Nx, int num_row)
 {
 	int i;
 	for(i=0; i<Nx; i++)
@@ -145,7 +163,7 @@ float norm(float *x, int Nx)
 	return norm;
 }
 
-void matrix_vector(float *A, float *data_in, float data_out, int Nx)
+void matrix_vector(float *A, float *data_in, float *data_out, int Nx)
 {
 	int i, j;
 	for(i=0; i<Nx; i++)
@@ -158,7 +176,7 @@ void matrix_vector(float *A, float *data_in, float data_out, int Nx)
 	}
 }
 
-float inner_product(float *data1, float data2, int Nx)
+float inner_product(float *data1, float *data2, int Nx)
 {
 	int i;
 	float value;
@@ -170,39 +188,130 @@ float inner_product(float *data1, float data2, int Nx)
 	return value;
 }
 
-void vector_shift(float *x, float a, float *y, int Nx)
+void vector_shift(float *x, float a, float *y, int iter)
 {
 	int i;
-	for(i=0; i<Nx; i++)
+	for(i=0; i<=iter; i++)
 	{
-		x[i] = x[i] - a*y[i];
+		x[i] -= a*y[i];
 	}
 }
-void gmres(float *A, float *x, float *b, int Nx)
+
+void GeneratePlaneRotation(float *dx, float *dy, float *cs, float *sn, int i, int Nx)
+{
+	// i = iter
+	// dx : iter, dy : iter + 1
+	float temp;
+	if (dy[Nx*(i+1)+i] == 0.0) 
+	{
+		cs[i] = 1.0;
+		sn[i] = 0.0;
+	} 
+	else if (abs(dy[Nx*(i+1)+i]) > abs(dx[Nx*i+i])) 
+	{
+		temp = dx[Nx*i+i] / dy[Nx*(i+1)+i];
+		sn[i] = 1.0 / sqrt( 1.0 + temp*temp );
+		cs[i] = temp * sn[i];
+	} 
+	else 
+	{
+		temp = dy[Nx*(i+1)+i] / dx[Nx*i+i];
+		cs[i] = 1.0 / sqrt( 1.0 + temp*temp );
+		sn[i] = temp * cs[i];
+	}
+}
+
+void ApplyPlaneRotation(float dx, float dy, float cs, float sn)
+{
+	// dx : iter, dy : iter+1
+	float temp;
+	temp  =  cs*dx + sn*dy;
+	dy = -sn*dx + cs*dy;
+	dx = temp;
+}
+
+// y = H \ s.
+void backsolver(float *H, float *s, float *y, int iter)
+{
+	int j, k;
+	float temp;
+	
+	for(j=iter; j>=0; j--)
+	{
+		temp = s[j];
+		for(k=j+1; k<=iter; k++)
+		{
+			temp -= y[k]*H[iter*j+k];
+		}
+		y[j] = temp/H[iter*j+j];
+	}	
+}
+
+void gmres(float *A, float *x, float *b, int Nx, float tol)
 {
 	int i, j, iter;
-	float beta, h;
-	float *Q, *H, *v, *temp;
+	float beta, error, a;
+	float *Q, *H, *v, *cs, *sn, *s, *y, *temp;
 	
+	s = (float *) malloc((Nx+1)*sizeof(float));
+	cs = (float *) malloc((Nx+1)*sizeof(float));
+	sn = (float *) malloc((Nx+1)*sizeof(float));
 	Q = (float *) malloc(Nx*(Nx+1)*sizeof(float));
 	H = (float *) malloc((Nx+1)*Nx*sizeof(float));
+	v = (float *) malloc(Nx*sizeof(float));
 	temp = (float *) malloc(Nx*sizeof(float));
 	
-	h = 1/(Nx+1);
+	for(j=0; j<Nx; j++)
+	{
+		cs[j] = 0.0;
+		sn[j] = 0.0;
+		s[j] = 0.0;
+	}
 	beta = norm(b, Nx);
 	Q_subvector(Q, b, Nx, 0);
 	Q_subnormal(Q, beta, Nx, 0);
 	
+	s[0] = beta;
 	for(iter=0; iter<Nx; iter++)
 	{
 		vector_subQ(Q, temp, Nx, iter);
 		matrix_vector(A, temp, v, Nx);
-		for(j=0; j<iter+1; j++)
+		for(j=0; j<=iter; j++)
 		{
 			vector_subQ(Q, temp, Nx, j);
-			H[Nx*j + iter] = inner_product(temp, v);
-			vector_shift(v, a, temp, Nx);
+			a = inner_product(temp, v, Nx);
+			H[Nx*j + iter] = a;
+			vector_shift(v, a, temp, iter);
 		}
-		H[Nx*(iter+1) + j]
-	} 
+		a = norm(v, Nx);
+		H[Nx*(iter+1) + iter] = a;
+//		printf(" H[%d][%d] = %f \n", iter, iter, H[Nx*iter+iter]);
+		Q_subvector(Q, v, Nx, iter+1);
+		Q_subnormal(Q, a, Nx, iter+1);
+		for (j=0; j<iter; j++)
+      	{
+      		ApplyPlaneRotation(H[Nx*j+iter], H[Nx*(j+1),iter], cs[j], sn[j]);
+		}
+		
+		GeneratePlaneRotation(H, H, cs, sn, iter, Nx);
+		printf( "cs[%d] = %f, sn[%d] = %f \n", iter, cs[iter], iter, sn[iter]);
+	    ApplyPlaneRotation(H[Nx*iter+iter], H[Nx*(iter+1)+iter], cs[iter], sn[iter]);
+	    ApplyPlaneRotation(s[iter], s[iter+1], cs[iter], sn[iter]);
+	    
+		error = abs(s[iter+1])/beta;
+		printf(" e = %f \n", error);
+		if (error <= tol | iter == Nx-1)
+		{
+			backsolver(H, s, y, iter);
+			for(i=0; i<iter; i++)
+			{
+				x[i] = 0.0;
+				for(j=0; j<iter; j++)
+				{
+					x[i] += Q[Nx*j+i]*y[j];
+				} 
+			}
+			break;
+		}
+	}
 }
