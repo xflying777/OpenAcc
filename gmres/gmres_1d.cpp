@@ -210,13 +210,13 @@ void GeneratePlaneRotation(float *dx, float *dy, float *cs, float *sn, int i, in
 	else if (abs(dy[Nx*(i+1)+i]) > abs(dx[Nx*i+i])) 
 	{
 		temp = dx[Nx*i+i] / dy[Nx*(i+1)+i];
-		sn[i] = 1.0 / sqrt( 1.0 + temp*temp );
+		sn[i] = 1.0 / sqrt( 1.0 + temp*temp);
 		cs[i] = temp * sn[i];
 	} 
 	else 
 	{
 		temp = dy[Nx*(i+1)+i] / dx[Nx*i+i];
-		cs[i] = 1.0 / sqrt( 1.0 + temp*temp );
+		cs[i] = 1.0 / sqrt( 1.0 + temp*temp);
 		sn[i] = temp * cs[i];
 	}
 }
@@ -301,19 +301,18 @@ void gmres(float *A, float *x, float *b, int Nx, float tol)
 		Q_subnormal(Q, a, Nx, iter+1);
 
 		for (j=0; j<iter; j++)
-      		{
-      			ApplyPlaneRotationH(H, H, cs, sn, j, Nx);
+      	{
+			ApplyPlaneRotationH(H, H, cs, sn, j, Nx);
 		}
 		
 		GeneratePlaneRotation(H, H, cs, sn, iter, Nx);
-	    	ApplyPlaneRotationH(H, H, cs, sn, iter, Nx);
-	    	ApplyPlaneRotationS(s, s, cs, sn, iter);
+		ApplyPlaneRotationH(H, H, cs, sn, iter, Nx);
+		ApplyPlaneRotationS(s, s, cs, sn, iter);
 	    
 		error = abs(s[iter+1])/beta;
 		if (error <= tol | iter == Nx-1)
 		{
 			backsolver(H, s, y, iter);
-			printf(" backsolver succeed \n");
 			for(i=0; i<iter; i++)
 			{
 				x[i] = 0.0;
@@ -325,4 +324,6 @@ void gmres(float *A, float *x, float *b, int Nx, float tol)
 			break;
 		}
 	}
+	printf(" H matrix : \n");
+	print_matrix(H, iter);
 }

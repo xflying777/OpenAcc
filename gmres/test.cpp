@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <math.h>
 
-void backsolver(float *H, float *s, float *y, int iter)
+void print_vector(float *x, int N);
+void print_matrix(float *x, int N);
+
+void backsolve(float *H, float *s, float *y, int iter)
 {
 	int j, k;
 	float temp;
@@ -18,15 +21,28 @@ void backsolver(float *H, float *s, float *y, int iter)
 	}	
 }
 
-void matrix_vector(float *A, float *data_in, float *data_out, int Nx)
+/*void backsolve(float *H, float *y, float *s, int iter)
+{  
+	int i, j;
+	for (i=iter; i>= 0; i--) 
+	{
+		y[i] /= H[iter*i+iter];
+		for (j= i-1; j>=0; j--)
+		{
+			y[j] -= H[iter*j+i]*y[i];
+		}
+	}
+}
+*/
+void matrix_vector(float *A, float *data_in, float *data_out, int N)
 {
 	int i, j;
-	for(i=0; i<Nx; i++)
+	for(i=0; i<N; i++)
 	{
 		data_out[i] = 0.0;
-		for(j=0; j<Nx; j++)
+		for(j=0; j<N; j++)
 		{
-			data_out[i] += A[Nx*i+j]*data_in[j];
+			data_out[i] += A[N*i+j]*data_in[j];
 		}
 	}
 }
@@ -48,6 +64,7 @@ void print_vector(float *x, int N)
 	for(i=0; i<N; i++)	printf(" %f ", x[i]);
 	printf("\n \n");
 }
+
 int main()
 {
 	int i, j, N;
@@ -67,22 +84,21 @@ int main()
 		{
 			H[N*i+j] = i + j + 1;
 		}
-		if(i == 1) break;
 	}
 	
-	printf("H matrix : \n");
-	print_matrix(H, N);
-/*	matrix_vector(H, u, s, N);
-	backsolver(H, s, y, N);
 	printf(" H matrix : \n");
 	print_matrix(H, N);
 	printf(" u vector: \n");
 	print_vector(u, N);
+	matrix_vector(H, u, s, N);
 	printf(" s vector: \n");
 	print_vector(s, N);
+	backsolve(H, s, y, N);
 	printf(" y vector: \n");
 	print_vector(y, N);
-*/	return 0;
+	
+	
+	return 0;
 	
 }
 
