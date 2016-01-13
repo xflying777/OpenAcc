@@ -92,7 +92,7 @@ int	GMRES(const Operator &A, Vector &x, const Vector &b,
 		{
       		w = M.solve(A * v[i]);
       		for (k = 0; k <= i; k++) 
-			{
+		{
         		H(k, i) = dot(w, v[k]);
         		w -= H(k, i) * v[k];
       		}
@@ -102,7 +102,7 @@ int	GMRES(const Operator &A, Vector &x, const Vector &b,
 	      	for (k = 0; k < i; k++)
 	      	{
 	      		ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k));
-			}
+		}
 			
 	      	GeneratePlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i));
 	      	ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i));

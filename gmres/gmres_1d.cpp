@@ -193,7 +193,7 @@ void vector_shift(float *x, float a, float *y, int iter)
 	int i;
 	for(i=0; i<=iter; i++)
 	{
-		x[i] -= a*y[i];
+		x[i] = x[i] - a*y[i];
 	}
 }
 
@@ -221,13 +221,24 @@ void GeneratePlaneRotation(float *dx, float *dy, float *cs, float *sn, int i, in
 	}
 }
 
-void ApplyPlaneRotation(float dx, float dy, float cs, float sn)
+void ApplyPlaneRotationH(float *dx, float *dy, float *cs, float *sn, int i, int Nx)
 {
+	// i = iter
 	// dx : iter, dy : iter+1
 	float temp;
-	temp  =  cs*dx + sn*dy;
-	dy = -sn*dx + cs*dy;
-	dx = temp;
+	temp  =  cs[i]*dx[Nx*i+i] + sn[i]*dy[Nx*(i+1)+i];
+	dy[Nx*(i+1)+i] = -sn[i]*dx[Nx*i+i] + cs[i]*dy[Nx*(i+1)+i];
+	dx[Nx*i+i] = temp;
+}
+
+void ApplyPlaneRotationS(float *dx, float *dy, float *cs, float *sn, int i)
+{
+	// i = iter
+	// dx : iter, dy : iter+1
+	float temp;
+	temp  =  cs[i]*dx[i] + sn[i]*dy[i+1];
+	dy[i+1] = -sn[i]*dx[i] + cs[i]*dy[i+1];
+	dx[i] = temp;
 }
 
 // y = H \ s.
@@ -235,13 +246,12 @@ void backsolver(float *H, float *s, float *y, int iter)
 {
 	int j, k;
 	float temp;
-	
 	for(j=iter; j>=0; j--)
 	{
 		temp = s[j];
 		for(k=j+1; k<=iter; k++)
 		{
-			temp -= y[k]*H[iter*j+k];
+			temp -= y[k]*H[iter*k+j];
 		}
 		y[j] = temp/H[iter*j+j];
 	}	
@@ -253,9 +263,9 @@ void gmres(float *A, float *x, float *b, int Nx, float tol)
 	float beta, error, a;
 	float *Q, *H, *v, *cs, *sn, *s, *y, *temp;
 	
-	s = (float *) malloc((Nx+1)*sizeof(float));
-	cs = (float *) malloc((Nx+1)*sizeof(float));
-	sn = (float *) malloc((Nx+1)*sizeof(float));
+	s = (float *) malloc(Nx*sizeof(float));
+	cs = (float *) malloc(Nx*sizeof(float));
+	sn = (float *) malloc(Nx*sizeof(float));
 	Q = (float *) malloc(Nx*(Nx+1)*sizeof(float));
 	H = (float *) malloc((Nx+1)*Nx*sizeof(float));
 	v = (float *) malloc(Nx*sizeof(float));
@@ -267,6 +277,7 @@ void gmres(float *A, float *x, float *b, int Nx, float tol)
 		sn[j] = 0.0;
 		s[j] = 0.0;
 	}
+
 	beta = norm(b, Nx);
 	Q_subvector(Q, b, Nx, 0);
 	Q_subnormal(Q, beta, Nx, 0);
@@ -283,26 +294,26 @@ void gmres(float *A, float *x, float *b, int Nx, float tol)
 			H[Nx*j + iter] = a;
 			vector_shift(v, a, temp, iter);
 		}
+
 		a = norm(v, Nx);
 		H[Nx*(iter+1) + iter] = a;
-//		printf(" H[%d][%d] = %f \n", iter, iter, H[Nx*iter+iter]);
 		Q_subvector(Q, v, Nx, iter+1);
 		Q_subnormal(Q, a, Nx, iter+1);
+
 		for (j=0; j<iter; j++)
-      	{
-      		ApplyPlaneRotation(H[Nx*j+iter], H[Nx*(j+1),iter], cs[j], sn[j]);
+      		{
+      			ApplyPlaneRotationH(H, H, cs, sn, j, Nx);
 		}
 		
 		GeneratePlaneRotation(H, H, cs, sn, iter, Nx);
-		printf( "cs[%d] = %f, sn[%d] = %f \n", iter, cs[iter], iter, sn[iter]);
-	    ApplyPlaneRotation(H[Nx*iter+iter], H[Nx*(iter+1)+iter], cs[iter], sn[iter]);
-	    ApplyPlaneRotation(s[iter], s[iter+1], cs[iter], sn[iter]);
+	    	ApplyPlaneRotationH(H, H, cs, sn, iter, Nx);
+	    	ApplyPlaneRotationS(s, s, cs, sn, iter);
 	    
 		error = abs(s[iter+1])/beta;
-		printf(" e = %f \n", error);
 		if (error <= tol | iter == Nx-1)
 		{
 			backsolver(H, s, y, iter);
+			printf(" backsolver succeed \n");
 			for(i=0; i<iter; i++)
 			{
 				x[i] = 0.0;
