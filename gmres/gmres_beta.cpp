@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 	int i,j,k,N;
 	double h, *b, *x, *u;
 	static double **A;
+	clock_t t1, t2;
 	
 	
 	printf("請輸入要分割的數量\n");
@@ -76,15 +77,12 @@ int main(int argc, char *argv[])
 	bfunc( b, N);
 	ufunc( u, N);
 	
+	t1 = clock();
 	GMRES(A, b, x, N, N-1 , 1.0e-6);
-
+	t2 = clock();
+	
 	printf(" error = %e \n", error(x, u, N));
-	
-
-	
-
-	
-	system("PAUSE");
+	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 	return 0;
 }
 

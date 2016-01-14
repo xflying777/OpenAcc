@@ -11,11 +11,10 @@ double error(double *x, double *y, int N);
 
 int main()
 {
-	int p, N;
+	int N;
 	clock_t t1, t2;
-	printf(" Please input (N = 2^p - 1) p = ");
-	scanf("%d",&p);
-	N = pow(2, p) - 1;
+	printf(" Please input N =  ");
+	scanf("%d",&N);
 	printf(" N = %d \n", N);
 	
 	double *A, *x, *b, *u, tol;
