@@ -3,28 +3,29 @@
 #include <math.h>
 #include <time.h>
 
-void print_vector(double *x, int N);
-void matrix_vector(double *A, double *x, double *b, int N);
-void initial(double *A, double *b, double *u, int N);
-void gmres(double *A, double *x, double *b, int N, double tol);
-double error(double *x, double *y, int N);
+void print_vector(float *x, int N);
+void matrix_vector(float *A, float *x, float *b, int N);
+void initial(float *A, float *b, float *u, int N);
+void gmres(float *A, float *x, float *b, int N, float tol);
+float error(float *x, float *y, int N);
 
 int main()
 {
-	int N;
+	int p, N;
 	clock_t t1, t2;
-	printf(" Please input N =  ");
-	scanf("%d",&N);
+	printf(" Please input (N = 2^p - 1) p = ");
+	scanf("%d",&p);
+	N = pow(2, p) - 1;
 	printf(" N = %d \n", N);
 	
-	double *A, *x, *b, *u, tol;
-	A = (double *) malloc(N*N*sizeof(double));
-	x = (double *) malloc(N*sizeof(double));
-	b = (double *) malloc(N*sizeof(double));
-	u = (double *) malloc(N*sizeof(double));
+	float *A, *x, *b, *u, tol;
+	A = (float *) malloc(N*N*sizeof(float));
+	x = (float *) malloc(N*sizeof(float));
+	b = (float *) malloc(N*sizeof(float));
+	u = (float *) malloc(N*sizeof(float));
 	
 	initial(A, b, u, N);	
-	tol = 1.0e-6;
+	tol = 1.0e-2;
 	t1 = clock();
 	gmres(A, x, b, N, tol);
 	t2 = clock();
@@ -35,10 +36,10 @@ int main()
 	return 0;
 }
 
-double error(double *x, double *y, int N)
+float error(float *x, float *y, int N)
 {
 	int i;
-	double temp, error;
+	float temp, error;
 	error = 0.0;
 	for(i=0; i<N; i++)
 	{
@@ -48,7 +49,7 @@ double error(double *x, double *y, int N)
 	return error;
 }
 
-void print_vector(double *x, int N)
+void print_vector(float *x, int N)
 {
 	int i;
 	for(i=0; i<N; i++)
@@ -58,7 +59,7 @@ void print_vector(double *x, int N)
 	printf("\n");
 }
 
-void print_matrix(double *x, int N)
+void print_matrix(float *x, int N)
 {
 	int i, j;
 	for(i=0;i<N;i++)
@@ -69,12 +70,12 @@ void print_matrix(double *x, int N)
 	printf("\n");
 }
 
-void initial(double *A, double *b, double *u, int N)
+void initial(float *A, float *b, float *u, int N)
 {
 	int i, j;
-	double h, h2, temp, x;
+	float h, h2, temp, x;
 	
-	h = 1.0/(N+1);
+	h = M_PI/(N+1);
 	h2 = h*h;
 	
 	for(i=0; i<N; i++)
@@ -88,9 +89,11 @@ void initial(double *A, double *b, double *u, int N)
 	for(i=0; i<N; i++)
 	{
 		x = (1+i)*h;
-		u[i] = x*sin(M_PI*x);
-		b[i] = 2*M_PI*cos(M_PI*x) - M_PI*M_PI*x*sin(M_PI*x);
-			
+		u[i] = x*sin(x);
+		
+		x = (1+i)*h;
+		b[i] = 2*cos(x) - x*sin(x);
+		
 		A[N*i+i] = temp;
 	}
 	temp = 1.0/h2;
@@ -101,10 +104,10 @@ void initial(double *A, double *b, double *u, int N)
 	}
 }
 
-double norm(double *x, int N)
+float norm(float *x, int N)
 {
 	int i;
-	double norm;
+	float norm;
 	norm=0.0;
 	for(i=0; i<N; i++)
 	{
@@ -114,10 +117,10 @@ double norm(double *x, int N)
 	return norm;
 }
 
-double inner_product(double *x, double *y, int N)
+float inner_product(float *x, float *y, int N)
 {
 	int i;
-	double temp;
+	float temp;
 	temp = 0.0;
 	for(i=0; i<N; i++)
 	{
@@ -126,7 +129,7 @@ double inner_product(double *x, double *y, int N)
 	return temp;
 }
 
-void matrix_vector(double *A, double *x, double *b, int N)
+void matrix_vector(float *A, float *x, float *b, int N)
 {
 	int i, j;
 	for(i=0; i<N; i++)
@@ -139,7 +142,7 @@ void matrix_vector(double *A, double *x, double *b, int N)
 	}
 }
 
-void q_subQ(double *q, double *Q, int N, int iter)
+void q_subQ(float *q, float *Q, int N, int iter)
 {
 	int i;
 	for(i=0; i<N; i++)
@@ -148,7 +151,7 @@ void q_subQ(double *q, double *Q, int N, int iter)
 	}
 }
 
-void subQ_v(double *Q, double *v, int N, int iter, double norm_v)
+void subQ_v(float *Q, float *v, int N, int iter, float norm_v)
 {
 	int i;
 	for(i=0; i<N; i++)
@@ -157,7 +160,7 @@ void subQ_v(double *Q, double *v, int N, int iter, double norm_v)
 	}
 }
 
-void v_shift(double *v, double *q, double h, int N)
+void v_shift(float *v, float *q, float h, int N)
 {
 	int i;
 	for(i=0; i<N; i++)
@@ -166,11 +169,11 @@ void v_shift(double *v, double *q, double h, int N)
 	}
 }
 
-void backsolve(double *H, double *s, double *y, int N, int i)
+void backsolve(float *H, float *s, float *y, int N, int i)
 {
 	// i = iter
 	int j, k;
-	double temp;
+	float temp;
 	
 	for(j=i; j>=0; j--)
 	{
@@ -184,9 +187,9 @@ void backsolve(double *H, double *s, double *y, int N, int i)
 
 }
 
-void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
+void GeneratePlaneRotation(float dx, float dy, float *cs, float *sn, int i)
 {
-	double temp;
+	float temp;
 	if (dy == 0.0) 
 	{
 		cs[i] = 1.0;
@@ -214,19 +217,19 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 }
 */
 
-void gmres(double *A, double *x, double *b, int N, double tol)
+void gmres(float *A, float *x, float *b, int N, float tol)
 {
 	int i, j, k;
-	double resid, beta, temp, *q, *v, *cs, *sn, *s, *y, *Q, *H;
+	float resid, beta, temp, *q, *v, *cs, *sn, *s, *y, *Q, *H;
 	
-	Q = (double *) malloc(N*(N+1)*sizeof(double));
-	H = (double *) malloc((N+1)*N*sizeof(double));
-	q = (double *) malloc(N*sizeof(double));
-	v = (double *) malloc(N*sizeof(double));
-	cs = (double *) malloc((N+1)*sizeof(double));
-	sn = (double *) malloc((N+1)*sizeof(double));
-	s = (double *) malloc((N+1)*sizeof(double));
-	y = (double *) malloc((N+1)*sizeof(double));
+	Q = (float *) malloc(N*(N+1)*sizeof(float));
+	H = (float *) malloc((N+1)*N*sizeof(float));
+	q = (float *) malloc(N*sizeof(float));
+	v = (float *) malloc(N*sizeof(float));
+	cs = (float *) malloc((N+1)*sizeof(float));
+	sn = (float *) malloc((N+1)*sizeof(float));
+	s = (float *) malloc((N+1)*sizeof(float));
+	y = (float *) malloc((N+1)*sizeof(float));
 	
 	for(i=0; i<N+1; i++)
 	{
@@ -289,7 +292,7 @@ void gmres(double *A, double *x, double *b, int N, double tol)
 			for(j=0; j<N; j++)
 			{
 				temp = 0.0;
-				for(k=0; k<i; k++)
+				for(k=0; k<=i; k++)
 				{
 					temp += Q[(N+1)*j+k]*y[k];
 				}
