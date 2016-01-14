@@ -76,9 +76,9 @@ int main(int argc, char *argv[])
 	bfunc( b, N);
 	ufunc( u, N);
 	
-	GMRES(A, b, x, N, N-1 , 1.0e-5);
+	GMRES(A, b, x, N, N-1 , 1.0e-6);
 
-	printf(" error = %f \n", error(x, u, N));
+	printf(" error = %e \n", error(x, u, N));
 	
 
 	
