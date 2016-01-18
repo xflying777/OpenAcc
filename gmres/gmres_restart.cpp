@@ -26,29 +26,32 @@
 
 void print_vector(float *x, int N);
 void matrix_vector(float *A, float *x, float *b, int N);
-void initial(float *A, float *b, float *u, int N);
-void gmres(float *A, float *x, float *b, int N, float tol);
+void initial(float *A, float *b, float *u, float x0, int N);
+void gmres(float *A, float *x, float *b, float x0, int N, int max_iter, float tol);
 float error(float *x, float *y, int N);
 
 int main()
 {
-	int p, N;
+	int N, max_iter;
+	float tol;
 	clock_t t1, t2;
-	printf(" Please input (N = 2^p - 1) p = ");
-	scanf("%d",&p);
-	N = pow(2, p) - 1;
-	printf(" N = %d \n", N);
+	printf(" Please input N =  ");
+	scanf("%d",&N);
+	printf(" Given tolerance tol = ");
+	scanf("%e",&tol);
 	
-	float *A, *x, *b, *u, tol;
+	
+	float *A, *x, *b, *u;
 	A = (float *) malloc(N*N*sizeof(float));
 	x = (float *) malloc(N*sizeof(float));
+	x0 = (float *) malloc(N*sizeof(float));
 	b = (float *) malloc(N*sizeof(float));
 	u = (float *) malloc(N*sizeof(float));
 	
-	initial(A, b, u, N);	
-	tol = 1.0e-2;
+	initial(A, b, u, x0, N);
+	max_iter = N;
 	t1 = clock();
-	gmres(A, x, b, N, tol);
+	gmres(A, x, b, N, max_iter, tol);
 	t2 = clock();
 	
 	printf(" error = %e \n", error(x, u, N));
@@ -91,7 +94,7 @@ void print_matrix(float *x, int N)
 	printf("\n");
 }
 
-void initial(float *A, float *b, float *u, int N)
+void initial(float *A, float *b, float *u, float x0, int N)
 {
 	int i, j;
 	float h, h2, temp, x;
@@ -109,6 +112,8 @@ void initial(float *A, float *b, float *u, int N)
 	temp = -2.0/h2;
 	for(i=0; i<N; i++)
 	{
+		x0[i] = 0.0;
+		
 		x = (1+i)*h;
 		u[i] = x*sin(x);
 		
@@ -238,13 +243,14 @@ void GeneratePlaneRotation(float dx, float dy, float *cs, float *sn, int i)
 }
 */
 
-void gmres(float *A, float *x, float *b, int N, float tol)
+void gmres(float *A, float *x, float *b, float x0, int N, int max_iter, float tol)
 {
 	int i, j, k;
-	float resid, beta, temp, *q, *v, *cs, *sn, *s, *y, *Q, *H;
+	float normb, resid, beta, temp, *q, *v, *cs, *sn, *s, *y, *Q, *H;
 	
 	Q = (float *) malloc(N*(N+1)*sizeof(float));
 	H = (float *) malloc((N+1)*N*sizeof(float));
+	r = (float *) malloc(N*sizeof(float));
 	q = (float *) malloc(N*sizeof(float));
 	v = (float *) malloc(N*sizeof(float));
 	cs = (float *) malloc((N+1)*sizeof(float));
@@ -252,7 +258,7 @@ void gmres(float *A, float *x, float *b, int N, float tol)
 	s = (float *) malloc((N+1)*sizeof(float));
 	y = (float *) malloc((N+1)*sizeof(float));
 	
-	for(i=0; i<N+1; i++)
+/*	for(i=0; i<N+1; i++)
 	{
 		cs[i] = 0.0;
 		sn[i] = 0.0;
@@ -263,13 +269,12 @@ void gmres(float *A, float *x, float *b, int N, float tol)
 			H[N*i+k] = 0.0;
 		}
 	}
-	
-	beta = norm(b, N);
-//	printf(" beta = %f \n", beta);
-	for(i=0; i<N; i++)
-	{
-		Q[(N+1)*i+0] = b[i]/beta;
-	}
+*/	
+
+	matrxi_vector(A, x0, r, N);
+	for (i=0; i<N; i++) r[i] = b[i] - r[i];
+	beta = norm(r, N);
+	for(i=0; i<N; i++)	Q[(N+1)*i+0] = r[i]/beta;
 	
 	s[0] = beta;
 	for (i = 0; i<N; i++) 
