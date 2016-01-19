@@ -88,45 +88,45 @@ int	GMRES(const Operator &A, Vector &x, const Vector &b,
     	s = 0.0;
     	s(0) = beta;
     
-    	for (i = 0; i < m && j <= max_iter; i++, j++) 
+	    	for (i = 0; i < m && j <= max_iter; i++, j++) 
 		{
-      		w = M.solve(A * v[i]);
-      		for (k = 0; k <= i; k++) 
-		{
-        		H(k, i) = dot(w, v[k]);
-        		w -= H(k, i) * v[k];
-      		}
-	      	H(i+1, i) = norm(w);
-	      	v[i+1] = w * (1.0 / H(i+1, i)); // ??? w / H(i+1, i)
+	      		w = M.solve(A * v[i]);
+	      		for (k = 0; k <= i; k++) 
+			{
+				H(k, i) = dot(w, v[k]);
+				w -= H(k, i) * v[k];
+	      		}
+		      	H(i+1, i) = norm(w);
+		      	v[i+1] = w * (1.0 / H(i+1, i)); // ??? w / H(i+1, i)
 
-	      	for (k = 0; k < i; k++)
-	      	{
-	      		ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k));
+		      	for (k = 0; k < i; k++)
+		      	{
+		      		ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k));
 			}
 			
-	      	GeneratePlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i));
-	      	ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i));
-	      	ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-	      
-	      	if ((resid = abs(s(i+1)) / normb) < tol) 
+		      	GeneratePlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i));
+		      	ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i));
+		      	ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+		      
+		      	if ((resid = abs(s(i+1)) / normb) < tol) 
 			{
-	        	Update(x, i, H, s, v);
-	        	tol = resid;
-	        	max_iter = j;
-	        	delete [] v;
-	        	return 0;
-	      	}
-    	}
-	    Update(x, m - 1, H, s, v);
-	    r = M.solve(b - A * x);
-	    beta = norm(r);
-	    if ((resid = beta / normb) < tol) 
+				Update(x, i, H, s, v);
+				tol = resid;
+				max_iter = j;
+				delete [] v;
+				return 0;
+			}
+		}
+		Update(x, m - 1, H, s, v);
+		r = M.solve(b - A * x);
+		beta = norm(r);
+		if ((resid = beta / normb) < tol) 
 		{
-	    	tol = resid;
-	      	max_iter = j;
-	      	delete [] v;
-	      	return 0;
-	    }
+			tol = resid;
+			max_iter = j;
+			delete [] v;
+			return 0;
+		}
 	}
   
 	tol = resid;
