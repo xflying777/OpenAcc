@@ -26,13 +26,13 @@
 
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
-void initial(double *A, double *b, double *u, double x0, int N);
-void gmres(double *A, double *x, double *b, double x0, int N, int max_iter, double tol);
+void initial(double *A, double *b, double *u, double *x0, int N);
+void gmres(double *A, double *x, double *b, int N, int max_iter, int iter, double tol);
 double error(double *x, double *y, int N);
 
 int main()
 {
-	int N, max_iter;
+	int N, max_iter, iter;
 	double tol;
 	clock_t t1, t2;
 	printf(" Please input N =  ");
@@ -44,14 +44,14 @@ int main()
 	double *A, *x, *b, *u;
 	A = (double *) malloc(N*N*sizeof(double));
 	x = (double *) malloc(N*sizeof(double));
-	x0 = (double *) malloc(N*sizeof(double));
 	b = (double *) malloc(N*sizeof(double));
 	u = (double *) malloc(N*sizeof(double));
 	
-	initial(A, b, u, x0, N);
-	max_iter = N;
+	initial(A, b, u, x, N);
+	max_iter = 10;
+	iter = 15;
 	t1 = clock();
-	gmres(A, x, b, N, max_iter, tol);
+	gmres(A, x, b, N, max_iter, iter, tol);
 	t2 = clock();
 	
 	printf(" error = %e \n", error(x, u, N));
@@ -94,7 +94,7 @@ void print_matrix(double *x, int N)
 	printf("\n");
 }
 
-void initial(double *A, double *b, double *u, double x0, int N)
+void initial(double *A, double *b, double *u, double *x0, int N)
 {
 	int i, j;
 	double h, h2, temp, x;
@@ -243,10 +243,10 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 }
 */
 
-void gmres(double *A, double *x, double *b, double x0, int N, int max_iter, double tol)
+void gmres(double *A, double *x, double *b, int N, int max_iter, int iter, double tol)
 {
 	int i, j, k, m;
-	double normb, resid, beta, temp, *q, *v, *cs, *sn, *s, *y, *Q, *H;
+	double normb, resid, beta, temp, *r, *q, *v, *cs, *sn, *s, *y, *Q, *H;
 	
 	Q = (double *) malloc(N*(N+1)*sizeof(double));
 	H = (double *) malloc((N+1)*N*sizeof(double));
@@ -270,18 +270,18 @@ void gmres(double *A, double *x, double *b, double x0, int N, int max_iter, doub
 		}
 	}
 */	
-
-	matrxi_vector(A, x0, r, N);
+	normb = norm(b, N);
+	matrix_vector(A, x, r, N);
 	for (i=0; i<N; i++)	r[i] = b[i] - r[i];
 	beta = norm(r, N);
 	for (i=0; i<N; i++)	Q[(N+1)*i+0] = r[i]/beta;
 	
 
-	while (m <= max_iter)
+	for (m=0; m<=max_iter; m++)
 	{
 		for (i=0; i<N+1; i++)	s[i] = 0.0;
 		s[0] = beta;
-		for (i=0; i<N; i++) 
+		for (i=0; i<iter; i++) 
 		{
 	  		q_subQ(q, Q, N, i);
 	  		matrix_vector(A, q, v, N);
@@ -314,24 +314,28 @@ void gmres(double *A, double *x, double *b, double x0, int N, int max_iter, doub
 		      	s[i] = temp;
 		      	resid = fabs(s[i+1]/beta);
 	     	
-		     	if (resid < tol | i == N-1) 
+		     	if (resid < tol | i == iter-1) 
 			{
 				printf(" resid = %e \n", resid);
-				printf(" converges at %d step \n", i);
+				printf(" converges at %d cycle %d step \n", m, i);
 				backsolve(H, s, y, N, i);
-
 				for(j=0; j<N; j++)
 				{
-					x[j] = 0.0;
 					for(k=0; k<=i; k++)
 					{
 						x[j] += Q[(N+1)*j+k]*y[k];
 					}
 				}
+				max_iter = m;
+				tol = resid;
 				break;
 			}
-		}
-	}
+		}//end for
+		matrix_vector(A, x, r, N);
+		for (j=0; j<N; j++)	r[j] = b[j] - r[j];
+		beta = norm(r, N);
+		for (i=0; i<N; i++)	Q[(N+1)*i+0] = r[i]/beta;
+	}//end while
 }
 
 
