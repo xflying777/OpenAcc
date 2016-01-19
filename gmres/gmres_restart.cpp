@@ -49,7 +49,7 @@ int main()
 	
 	initial(A, b, u, x, N);
 	max_iter = 10;
-	iter = 15;
+	iter = 10;
 	t1 = clock();
 	gmres(A, x, b, N, max_iter, iter, tol);
 	t2 = clock();
@@ -258,7 +258,7 @@ void gmres(double *A, double *x, double *b, int N, int max_iter, int iter, doubl
 	s = (double *) malloc((N+1)*sizeof(double));
 	y = (double *) malloc((N+1)*sizeof(double));
 	
-/*	for(i=0; i<N+1; i++)
+	for(i=0; i<N+1; i++)
 	{
 		cs[i] = 0.0;
 		sn[i] = 0.0;
@@ -269,7 +269,7 @@ void gmres(double *A, double *x, double *b, int N, int max_iter, int iter, doubl
 			H[N*i+k] = 0.0;
 		}
 	}
-*/	
+	
 	normb = norm(b, N);
 	matrix_vector(A, x, r, N);
 	for (i=0; i<N; i++)	r[i] = b[i] - r[i];
@@ -289,32 +289,32 @@ void gmres(double *A, double *x, double *b, int N, int max_iter, int iter, doubl
 	  		for (k=0; k<=i; k++) 
 			{
 				q_subQ(q, Q, N, k);
-	    			H[N*k+i] = inner_product(q, v, N);
-	    			v_shift(v, q, H[N*k+i], N);
+	    		H[N*k+i] = inner_product(q, v, N);
+	    		v_shift(v, q, H[N*k+i], N);
 	  		}
 	  		
 			H[N*(i+1)+i] = norm(v, N);
 			subQ_v(Q, v, N, i+1, H[N*(i+1)+i]);
 		
-		    	for (k=0; k < i; k++)
-		      	{
-		      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
-		      		temp = cs[k]*H[N*k+i] + sn[k]*H[N*(k+1)+i];
+	    	for (k=0; k < i; k++)
+	      	{
+	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+	      		temp = cs[k]*H[N*k+i] + sn[k]*H[N*(k+1)+i];
 				H[N*(k+1)+i] = -1.0*sn[k]*H[N*k+i] + cs[k]*H[N*(k+1)+i];
 				H[N*k+i] = temp;
 			}
 		
-		      	GeneratePlaneRotation(H[N*i+i], H[N*(i+1)+i], cs, sn, i);
-		      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+		    GeneratePlaneRotation(H[N*i+i], H[N*(i+1)+i], cs, sn, i);
+	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
 			H[N*i+i] = cs[i]*H[N*i+i] + sn[i]*H[N*(i+1)+i];
 			H[N*(i+1)+i] = 0.0;
-		      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-		      	temp = cs[i]*s[i];
-		      	s[i+1] = -1.0*sn[i]*s[i];
-		      	s[i] = temp;
-		      	resid = fabs(s[i+1]/beta);
-	     	
-		     	if (resid < tol | i == iter-1) 
+	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+	      	temp = cs[i]*s[i];
+	      	s[i+1] = -1.0*sn[i]*s[i];
+	      	s[i] = temp;
+	      	resid = fabs(s[i+1]/beta);
+     	
+	     	if (resid < tol) 
 			{
 				printf(" resid = %e \n", resid);
 				printf(" converges at %d cycle %d step \n", m, i);
@@ -326,16 +326,26 @@ void gmres(double *A, double *x, double *b, int N, int max_iter, int iter, doubl
 						x[j] += Q[(N+1)*j+k]*y[k];
 					}
 				}
-				max_iter = m;
-				tol = resid;
 				break;
 			}
-		}//end for
+		}//end inside for
+		
+		if (resid < tol)	break;
+		
+/*		backsolve(H, s, y, N, i);
+		print_vector(y, i);
+		for(j=0; j<N; j++)
+		{
+			for(k=0; k<=i; k++)
+			{
+				x[j] += Q[(N+1)*j+k]*y[k];
+			}
+		}
 		matrix_vector(A, x, r, N);
 		for (j=0; j<N; j++)	r[j] = b[j] - r[j];
 		beta = norm(r, N);
 		for (i=0; i<N; i++)	Q[(N+1)*i+0] = r[i]/beta;
-	}//end while
+*/	}//end outside for
 }
 
 
