@@ -1,25 +1,16 @@
 #include <cufft.h>
 
 // Declared extern "C" to disable C++ name mangling
-extern "C" void for_CUFFT(float *d_data, int n, void *stream)
+extern "C" void for_CUFFT(double *d_data, int n, void *stream)
 {
     cufftHandle plan;
-    cufftPlan1d(&plan, n, CUFFT_C2C, 1);
+    cufftPlan1d(&plan, n, CUFFT_Z2Z, 1);
     cufftSetStream(plan, (cudaStream_t)stream);
-    cufftExecC2C(plan, (cufftComplex*)d_data, (cufftComplex*)d_data,CUFFT_FORWARD);
+    cufftExecZ2Z(plan, (cufftDoubleComplex*)d_data, (cufftDoubleComplex*)d_data,CUFFT_FORWARD);
     cufftDestroy(plan);
 }
 
-/*
-extern "C" void inv_CUFFT(float *d_data, int n, void *stream)
-{
-    cufftHandle plan;
-    cufftPlan1d(&plan, n, CUFFT_C2R, 1);
-    cufftSetStream(plan, (cudaStream_t)stream);
-    cufftExecC2R(plan, (cufftComplex*)d_data, (cufftReal*)d_data,CUFFT_INVERSE);
-    cufftDestroy(plan);
-}
-*/
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,19 +22,19 @@ extern "C" void inv_CUFFT(float *d_data, int n, void *stream)
 #endif
 
 // Forward declaration of wrapper function that will call CUFFT
-extern void launchCUFFT(float *d_data, int n, void *stream);
+extern void launchCUFFT(double *d_data, int n, void *stream);
 
 int main(int argc, char *argv[])
 {
     int n = 256;
-    float *data = (float* )malloc(2*n*sizeof(float));
+    double *data = (double* )malloc(2*n*sizeof(double));
     int i;
 
     // Initialize interleaved input data on host
-    float w = 7.0;
-    float x;
+    double w = 7.0;
+    double x;
     for(i=0; i<2*n; i+=2)  {
-        x = (float)i/2.0/(n-1);
+        x = (double)i/2.0/(n-1);
         data[i] = cos(2*M_PI*w*x);
         data[i+1] = 0.0;
     }
