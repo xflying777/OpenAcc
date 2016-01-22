@@ -282,7 +282,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 */	
 	normb = norm(b, N);
 	
-	#pragma acc data create(Q[0:(N+1)*N], H[0:(N+1)*N], tempv[0:N], r[0:N], q[0:N], v[0:N], cs[0:N+1], sn[0:N+1], s[0:N+1], y[0:N]), copyin(A[0:N*N], b[0:N]), cpyout(x[0:N])
+	#pragma acc data create(Q[0:(N+1)*N], H[0:(N+1)*N], tempv[0:N], r[0:N], q[0:N], v[0:N], cs[0:N+1], sn[0:N+1], s[0:N+1], y[0:N]), copyin(A[0:N*N], b[0:N]), copyout(x[0:N])
 	{
 	matrix_vector(A, x, tempv, N);
 	#pragma acc parallel loop independent
