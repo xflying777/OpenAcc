@@ -309,7 +309,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		{
 	  		q_subQ(q, Q, N, i);
 	  		matrix_vector(A, q, v, N);
-//			#pragma acc loop independent
+
 	  		for (k=0; k<=i; k++)
 			{
 				q_subQ(q, Q, N, k);
@@ -320,6 +320,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			H[N*(i+1)+i] = norm(v, N);
 			subQ_v(Q, v, N, i+1, H[N*(i+1)+i]);
 
+			#pragma acc kernels
 			for (k = 0; k < i; k++)
 			{
 				//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
