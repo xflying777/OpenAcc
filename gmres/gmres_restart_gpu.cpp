@@ -256,7 +256,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 {
 	int i, j, k, m;
 	double resid, normb, beta, temp, *tempv, *r, *q, *v, *cs, *sn, *s, *y, *Q, *H;
-	
+
 	Q = (double *) malloc(N*(N+1)*sizeof(double));
 	H = (double *) malloc((N+1)*N*sizeof(double));
 	tempv = (double *) malloc(N*sizeof(double));
@@ -267,7 +267,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	sn = (double *) malloc((N+1)*sizeof(double));
 	s = (double *) malloc((N+1)*sizeof(double));
 	y = (double *) malloc(N*sizeof(double));
-	
+
 /*	for(i=0; i<N+1; i++)
 	{
 		cs[i] = 0.0;
@@ -279,16 +279,16 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			H[N*i+k] = 0.0;
 		}
 	}
-*/	
+*/
 	normb = norm(b, N);
-	
-	#pragma acc data create(Q[0:(N+1)*N], H[0:(N+1)*N], tempv[0:N], r[0:N], q[0:N], v[0:N], cs[0:N+1], sn[0:N+1], s[0:N+1], y[0:N]), copyin(A[0:N*N], b[0:N]), copyout(x[0:N])
+
+	#pragma acc data create(Q[0:(N+1)*N], H[0:(N+1)*N], tempv[0:N], r[0:N], q[0:N], v[0:N], cs[0:N+1], sn[0:N+1], s[0:N+1], y[0:N]), copyin(A[0:N*N], b[0:N]), copy(x[0:N])
 	{
 	matrix_vector(A, x, tempv, N);
 	#pragma acc parallel loop independent
 	for (i=0; i<N; i++)	r[i] = b[i] - tempv[i];
 	beta = norm(r, N);
-	
+
 	for (m=0; m<max_restart; m++)
 	{
 		#pragma acc parallel loop independent
@@ -298,41 +298,41 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			Q[(N+1)*i+0] = r[i]/beta;
 		}
 		s[0] = beta;
-		
-		for (i = 0; i<max_iter; i++) 
+
+		for (i = 0; i<max_iter; i++)
 		{
 	  		q_subQ(q, Q, N, i);
 	  		matrix_vector(A, q, v, N);
-	  		for (k=0; k<=i; k++) 
+//			#pragma acc loop independent
+	  		for (k=0; k<=i; k++)
 			{
 				q_subQ(q, Q, N, k);
-	    		H[N*k+i] = inner_product(q, v, N);
-	    		v_shift(v, q, H[N*k+i], N);
+				H[N*k+i] = inner_product(q, v, N);
+				v_shift(v, q, H[N*k+i], N);
 	  		}
-	  		
+
 			H[N*(i+1)+i] = norm(v, N);
 			subQ_v(Q, v, N, i+1, H[N*(i+1)+i]);
-			
-			#pragma acc parallel loop independent
-	    	for (k = 0; k < i; k++)
-	      	{
-	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
-	      		temp = cs[k]*H[N*k+i] + sn[k]*H[N*(k+1)+i];
+
+			for (k = 0; k < i; k++)
+			{
+				//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+				temp = cs[k]*H[N*k+i] + sn[k]*H[N*(k+1)+i];
 				H[N*(k+1)+i] = -1.0*sn[k]*H[N*k+i] + cs[k]*H[N*(k+1)+i];
 				H[N*k+i] = temp;
 			}
-			
-	      	GeneratePlaneRotation(H[N*i+i], H[N*(i+1)+i], cs, sn, i);
-	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+
+			GeneratePlaneRotation(H[N*i+i], H[N*(i+1)+i], cs, sn, i);
+			//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
 			H[N*i+i] = cs[i]*H[N*i+i] + sn[i]*H[N*(i+1)+i];
 			H[N*(i+1)+i] = 0.0;
-	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-	      	temp = cs[i]*s[i];
-	      	s[i+1] = -1.0*sn[i]*s[i];
-	      	s[i] = temp;
-	      	resid = fabs(s[i+1]/beta);
-	     	
-	     	if (resid < tol) 
+			//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+			temp = cs[i]*s[i];
+			s[i+1] = -1.0*sn[i]*s[i];
+			s[i] = temp;
+			resid = fabs(s[i+1]/beta);
+
+			if (resid < tol)
 			{
 				printf(" resid = %e \n", resid);
 				printf(" Converges at %d step ", i+1);
@@ -347,15 +347,14 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 					}
 				}
 				break;
-	      	}
+			}
 		}//end inside for
 		// Caution : i = i + 1.
-		if (resid < tol)	
+		if (resid < tol)
 		{
 			printf(" %d cycle \n", m);
 			break;
 		}
-		
 
 		backsolve(H, s, y, N, i-1);
 		#pragma acc parallel loop independent
@@ -373,14 +372,14 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		beta = norm(r, N);
 		s[i] = beta;
 		resid = s[i]/normb;
-		if ( resid < tol)	
+		if ( resid < tol)
 		{
 			printf(" resid = %e \n", resid);
 			printf(" Converges at %d cycle %d step. \n", m, i);
 			break;
 		}
 	}//end outside for
-	}//end pragma acc 
+	}//end pragma acc
 }
 
 
