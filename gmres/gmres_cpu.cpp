@@ -1,3 +1,24 @@
+//*****************************************************************
+// Iterative template routine -- GMRES
+//
+// GMRES solves the unsymmetric linear system Ax = b using the 
+// Generalized Minimum Residual method
+//
+// GMRES follows the algorithm described on p. 20 of the 
+// SIAM Templates book.
+//
+// The return value indicates convergence within max_iter (input)
+// iterations (0), or no convergence within max_iter iterations (1).
+//
+// Upon successful return, output arguments have the following values:
+//  
+//        x  --  approximate solution to Ax = b
+// max_iter  --  the number of iterations performed before the
+//               tolerance was reached
+//      tol  --  the residual after the final iteration
+//  
+//*****************************************************************
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -6,17 +27,21 @@
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
 void print_matrixH(double *x, int N, int k);
-void initial(double *A, double *b, double *u, int N);
-void gmres(double *A, double *x, double *b, int N, double tol);
+void initial(double *A, double *b, double *x0, double *u, int N);
+void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
 int main()
 {
-	int N;
+	int N, max_restart, max_iter;
 	clock_t t1, t2;
 	printf(" Please input N =  ");
 	scanf("%d",&N);
-	printf(" N = %d \n", N);
+	printf(" Please input max restart times max_restart = ");
+	scanf("%d",&max_restart);
+	printf(" Please input max iteration times max_iter = ");
+	scanf("%d",&max_iter);
+	printf(" N = %d , max_restart = %d , max_iter = %d \n \n", N, max_restart, max_iter);
 	
 	double *A, *x, *b, *u, tol;
 	A = (double *) malloc(N*N*sizeof(double));
@@ -24,10 +49,10 @@ int main()
 	b = (double *) malloc(N*sizeof(double));
 	u = (double *) malloc(N*sizeof(double));
 	
-	initial(A, b, u, N);	
-	tol = 1.0e-6;
+	initial(A, b, x, u, N);	
+	tol = 1.0e-4;
 	t1 = clock();
-	gmres(A, x, b, N, tol);
+	gmres(A, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
 	
 	printf(" error = %e \n", error(x, u, N));
@@ -81,7 +106,7 @@ void print_matrixH(double *x, int N, int k)
 	printf("\n");
 }
 
-void initial(double *A, double *b, double *u, int N)
+void initial(double *A, double *b, double *x0, double *u, int N)
 {
 	int i, j;
 	double h, h2, temp, x;
@@ -99,6 +124,7 @@ void initial(double *A, double *b, double *u, int N)
 	temp = -2.0/h2;
 	for(i=0; i<N; i++)
 	{
+		x0[i] = 0.0;
 		x = (1+i)*h;
 		u[i] = x*sin(x);
 		b[i] = 2*cos(x) - x*sin(x);
@@ -226,13 +252,15 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 }
 */
 
-void gmres(double *A, double *x, double *b, int N, double tol)
+void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
-	int i, j, k;
-	double resid, beta, temp, *q, *v, *cs, *sn, *s, *y, *Q, *H;
+	int i, j, k, m;
+	double resid, normb, beta, temp, *tempv, *r, *q, *v, *cs, *sn, *s, *y, *Q, *H;
 	
 	Q = (double *) malloc(N*(N+1)*sizeof(double));
 	H = (double *) malloc((N+1)*N*sizeof(double));
+	tempv = (double *) malloc(N*sizeof(double));
+	r = (double *) malloc(N*sizeof(double));
 	q = (double *) malloc(N*sizeof(double));
 	v = (double *) malloc(N*sizeof(double));
 	cs = (double *) malloc((N+1)*sizeof(double));
@@ -240,7 +268,7 @@ void gmres(double *A, double *x, double *b, int N, double tol)
 	s = (double *) malloc((N+1)*sizeof(double));
 	y = (double *) malloc((N+1)*sizeof(double));
 	
-	for(i=0; i<N+1; i++)
+/*	for(i=0; i<N+1; i++)
 	{
 		cs[i] = 0.0;
 		sn[i] = 0.0;
@@ -251,63 +279,98 @@ void gmres(double *A, double *x, double *b, int N, double tol)
 			H[N*i+k] = 0.0;
 		}
 	}
+*/	
+	normb = norm(b, N);
 	
-	beta = norm(b, N);
-	for(i=0; i<N; i++)
-	{
-		Q[(N+1)*i+0] = b[i]/beta;
-	}
-	s[0] = beta;
+	matrix_vector(A, x, tempv, N);
+	for (i=0; i<N; i++)	r[i] = b[i] - tempv[i];
+	beta = norm(r, N);
 	
-	for (i = 0; i<N; i++) 
+	for (m=0; m<max_restart; m++)
 	{
-  		q_subQ(q, Q, N, i);
-  		matrix_vector(A, q, v, N);
-  		for (k=0; k<=i; k++) 
+
+		for (i=0; i<N; i++)
 		{
-			q_subQ(q, Q, N, k);
-    		H[N*k+i] = inner_product(q, v, N);
-    		v_shift(v, q, H[N*k+i], N);
-  		}
-  		
-		H[N*(i+1)+i] = norm(v, N);
-		subQ_v(Q, v, N, i+1, H[N*(i+1)+i]);
+			s[i+1] = 0.0;
+			Q[(N+1)*i+0] = r[i]/beta;
+		}
+		s[0] = beta;
 		
-    	for (k = 0; k < i; k++)
-      	{
-      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
-      		temp = cs[k]*H[N*k+i] + sn[k]*H[N*(k+1)+i];
-			H[N*(k+1)+i] = -1.0*sn[k]*H[N*k+i] + cs[k]*H[N*(k+1)+i];
-			H[N*k+i] = temp;
+		for (i = 0; i<max_iter; i++) 
+		{
+	  		q_subQ(q, Q, N, i);
+	  		matrix_vector(A, q, v, N);
+	  		for (k=0; k<=i; k++) 
+			{
+				q_subQ(q, Q, N, k);
+	    		H[N*k+i] = inner_product(q, v, N);
+	    		v_shift(v, q, H[N*k+i], N);
+	  		}
+	  		
+			H[N*(i+1)+i] = norm(v, N);
+			subQ_v(Q, v, N, i+1, H[N*(i+1)+i]);
+			
+	    	for (k = 0; k < i; k++)
+	      	{
+	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+	      		temp = cs[k]*H[N*k+i] + sn[k]*H[N*(k+1)+i];
+				H[N*(k+1)+i] = -1.0*sn[k]*H[N*k+i] + cs[k]*H[N*(k+1)+i];
+				H[N*k+i] = temp;
+			}
+			
+	      	GeneratePlaneRotation(H[N*i+i], H[N*(i+1)+i], cs, sn, i);
+	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+			H[N*i+i] = cs[i]*H[N*i+i] + sn[i]*H[N*(i+1)+i];
+			H[N*(i+1)+i] = 0.0;
+	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+	      	temp = cs[i]*s[i];
+	      	s[i+1] = -1.0*sn[i]*s[i];
+	      	s[i] = temp;
+	      	resid = fabs(s[i+1]/beta);
+	     	
+	     	if (resid < tol) 
+			{
+				printf(" resid = %e \n", resid);
+				printf(" Converges at %d step ", i+1);
+				backsolve(H, s, y, N, i);
+				for(j=0; j<N; j++)
+				{
+					for(k=0; k<=i; k++)
+					{
+						x[j] += Q[(N+1)*j+k]*y[k];
+					}
+				}
+				break;
+	      	}
+		}//end inside for
+		// Caution : i = i + 1.
+		if (resid < tol)	
+		{
+			printf(" %d cycle \n", m);
+			break;
 		}
 		
-      	GeneratePlaneRotation(H[N*i+i], H[N*(i+1)+i], cs, sn, i);
-      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
-		H[N*i+i] = cs[i]*H[N*i+i] + sn[i]*H[N*(i+1)+i];
-		H[N*(i+1)+i] = 0.0;
-      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-      	temp = cs[i]*s[i];
-      	s[i+1] = -1.0*sn[i]*s[i];
-      	s[i] = temp;
-      	resid = fabs(s[i+1]/beta);
-     	
-     	if (resid < tol | i == N-1) 
+
+		backsolve(H, s, y, N, i-1);
+		for(j=0; j<N; j++)
+		{
+			for(k=0; k<=i-1; k++)
+			{
+				x[j] += Q[(N+1)*j+k]*y[k];
+			}
+		}
+		matrix_vector(A, x, tempv, N);
+		for (j=0; j<N; j++)	r[j] = b[j] - tempv[j];
+		beta = norm(r, N);
+		s[i] = beta;
+		resid = s[i]/normb;
+		if ( resid < tol)	
 		{
 			printf(" resid = %e \n", resid);
-			printf(" converges at %d step \n", i+1);
-//			print_matrixH(H, N, i);
-			backsolve(H, s, y, N, i);
-			for(j=0; j<N; j++)
-			{
-				x[j] = 0.0;
-				for(k=0; k<=i; k++)
-				{
-					x[j] += Q[(N+1)*j+k]*y[k];
-				}
-			}
+			printf(" Converges at %d cycle %d step. \n", m, i);
 			break;
-      	}
-	}
+		}
+	}//end outside for
 }
 
 
