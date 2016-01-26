@@ -45,9 +45,9 @@ int main()
 	
 	double *A, *x, *b, *u, tol;
 	A = (double *) malloc(N*N*sizeof(double));
-	x = (double *) malloc(N*sizeof(double));
-	b = (double *) malloc(N*sizeof(double));
-	u = (double *) malloc(N*sizeof(double));
+	x = (double *) malloc(N*N*sizeof(double));
+	b = (double *) malloc(N*N*sizeof(double));
+	u = (double *) malloc(N*N*sizeof(double));
 	
 	initial(A, b, x, u, N);	
 	tol = 1.0e-4;
@@ -55,7 +55,7 @@ int main()
 	gmres(A, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
 	
-	printf(" error = %e \n", error(x, u, N));
+	printf(" error = %e \n", error(x, u, N*N));
 	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 	
 	return 0;
@@ -95,12 +95,12 @@ void print_matrix(double *x, int N)
 	printf("\n");
 }
 
-void print_matrixH(double *x, int N, int k)
+void print_matrixH(double *x, int max_iter, int k)
 {
 	int i, j;
 	for(i=0;i<=k;i++)
 	{
-		for (j=0;j<=k;j++) printf(" %f ", x[N*i+j]);
+		for (j=0;j<=k;j++) printf(" %f ", x[max_iter*i+j]);
 		printf("\n");
 	}
 	printf("\n");
@@ -109,26 +109,26 @@ void print_matrixH(double *x, int N, int k)
 void initial(double *A, double *b, double *x0, double *u, int N)
 {
 	int i, j;
-	double h, h2, temp, x;
+	double h, h2, temp, x, y;
 	
 	h = M_PI/(N+1);
 	h2 = h*h;
 	
 	for(i=0; i<N; i++)
 	{
+		y = (1+i)*h;
 		for(j=0; j<N; j++)
 		{
+			x = (1+j)*h;
+			x0[N*i+j] = 0.0;
 			A[N*i+j] = 0.0;
+			u[N*i+j] = x*y*sin(x)*sin(y);
+			b[N*i+j] = x*sin(x)*(2*cos(y) - y*sin(y)) + y*sin(y)*(2*cos(x) - x*sin(x));
 		}
 	}
 	temp = -2.0/h2;
 	for(i=0; i<N; i++)
-	{
-		x0[i] = 0.0;
-		x = (1+i)*h;
-		u[i] = x*sin(x);
-		b[i] = 2*cos(x) - x*sin(x);
-			
+	{			
 		A[N*i+i] = temp;
 	}
 	temp = 1.0/h2;
@@ -164,38 +164,55 @@ double inner_product(double *x, double *y, int N)
 	return temp;
 }
 
-void matrix_vector(double *A, double *x, double *b, int N)
+void matrix_matrix(double *A, double *x, double *b, int N)
 {
-	int i, j;
-	for(i=0; i<N; i++)
+	int i, j, k;
+	for (i=0; i<N; i++)
 	{
-		b[i] = 0.0;
-		for(j=0; j<N; j++)
+		for (j=0; j<N; j++)
 		{
-			b[i] += A[N*i+j]*x[j];
+			b[N*i+j] = 0.0;
+			for (k=0; k<N; k++)
+			{
+				b[N*i+j] += A[N*j+k]*x[N*k+j];
+			}
 		}
 	}
 }
 
-void q_subQ(double *q, double *Q, int N, int max_iter, int iter)
+void matrix_sum(double *x, double *y, double *out, int N)
 {
-	int i;
+	int i, N2;
+	N2 = N*N;
+	for (i=0; i<N2; i++)	out[i] = x[i] + y[i];
+}
+void q_subQ(double *q, double *Q, int N, int iter)
+{
+	int i, j, N2;
+	N2 = N*N*iter;
 	for(i=0; i<N; i++)
 	{
-		q[i] = Q[(max_iter+1)*i + iter];
+		for (j=0; j<N; j++)
+		{
+			q[N*i+j] = Q[N2+N*i+j];
+		}
 	}
 }
 
-void subQ_v(double *Q, double *v, int N, int max_iter, int iter, double norm_v)
+void subQ_v(double *Q, double *v, int N, int iter, double norm_v)
 {
-	int i;
-	for(i=0; i<N; i++)
+	int i, j, N2;
+	N2 = N*N*iter;
+	for (i=0; i<N; i++)
 	{
-		Q[(max_iter+1)*i + iter] = v[i]/norm_v;
+		for (j=0; j<N; j++)
+		{
+			Q[N2+N*i+j] = v[N*i+j]/norm_v;
+		}
 	}
 }
 
-void v_shift(double *v, double *q, double h, int N)
+void w_shift(double *v, double *q, double h, int N)
 {
 	int i;
 	for(i=0; i<N; i++)
@@ -244,58 +261,53 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 	}
 }
 
-/*void ApplyPlaneRotation(Real &dx, Real &dy, Real &cs, Real &sn)
-{
-	Real temp  =  cs * dx + sn * dy;
-	dy = -sn * dx + cs * dy;
-	dx = temp;
-}
-*/
-
 void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
-	int i, j, k, m;
-	double resid, normb, beta, temp, *tempv, *r, *q, *v, *cs, *sn, *s, *y, *Q, *H;
+	int i, j, k, l, m, N2;
+	double resid, normb, beta, temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
 	
-	Q = (double *) malloc(N*(max_iter+1)*sizeof(double));
+	Q = (double *) malloc(N*N*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
-	tempv = (double *) malloc(N*sizeof(double));
-	r = (double *) malloc(N*sizeof(double));
-	q = (double *) malloc(N*sizeof(double));
-	v = (double *) malloc(N*sizeof(double));
-	cs = (double *) malloc((N+1)*sizeof(double));
-	sn = (double *) malloc((N+1)*sizeof(double));
-	s = (double *) malloc((N+1)*sizeof(double));
-	y = (double *) malloc((N+1)*sizeof(double));
-		
-	normb = norm(b, N);
-	matrix_vector(A, x, v, N);
-	for (i=0; i<N; i++)	r[i] = b[i] - v[i];
-	beta = norm(r, N);
+	r = (double *) malloc(N*N*sizeof(double));
+	q = (double *) malloc(N*N*sizeof(double));
+	v = (double *) malloc(N*N*sizeof(double));
+	z = (double *) malloc(N*N*sizeof(double));
+	w = (double *) malloc(N*N*sizeof(double));
+	cs = (double *) malloc((max_iter+1)*sizeof(double));
+	sn = (double *) malloc((max_iter+1)*sizeof(double));
+	s = (double *) malloc((max_iter+1)*sizeof(double));
+	y = (double *) malloc((max_iter+1)*sizeof(double));
+	
+	N2 = N*N;
+	normb = norm(b, N2);
+	
+	matrix_matrix(A, x, v, N);
+	matrix_matrix(x, A, z, N);
+	for (i=0; i<N2; i++)	r[i] = b[i] - (v[i] + z[i]);
+	beta = norm(r, N2);
 	
 	for (m=0; m<max_restart; m++)
 	{
 
-		for (i=0; i<N; i++)
-		{
-			s[i+1] = 0.0;
-			Q[(max_iter+1)*i+0] = r[i]/beta;
-		}
+		for (i=0; i<N2; i++)	Q[i] = r[i]/beta;
+		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
 		s[0] = beta;
 		
 		for (i = 0; i<max_iter; i++) 
 		{
-	  		q_subQ(q, Q, N, max_iter, i);
-	  		matrix_vector(A, q, v, N);
+	  		q_subQ(q, Q, N, i);
+	  		matrix_matrix(A, q, v, N);
+	  		matrix_matrix(q, A, z, N);
+	  		matrix_sum(v, z, w, N);
 	  		for (k=0; k<=i; k++) 
 			{
-				q_subQ(q, Q, N, max_iter, k);
-	    		H[max_iter*k+i] = inner_product(q, v, N);
-	    		v_shift(v, q, H[max_iter*k+i], N);
+				q_subQ(q, Q, N, k);
+	    		H[max_iter*k+i] = inner_product(q, w, N2);
+	    		w_shift(w, q, H[max_iter*k+i], N2);
 	  		}
 	  		
-			H[max_iter*(i+1)+i] = norm(v, N);
-			subQ_v(Q, v, N, max_iter, i+1, H[max_iter*(i+1)+i]);
+			H[max_iter*(i+1)+i] = norm(w, N2);
+			subQ_v(Q, w, N, i+1, H[max_iter*(i+1)+i]);
 			
 	    	for (k = 0; k < i; k++)
 	      	{
@@ -322,9 +334,12 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				backsolve(H, s, y, N, max_iter, i);
 				for(j=0; j<N; j++)
 				{
-					for(k=0; k<=i; k++)
+					for (l=0; l<N; l++)
 					{
-						x[j] += Q[(max_iter+1)*j+k]*y[k];
+						for(k=0; k<=i; k++)
+						{
+							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+						}
 					}
 				}
 				break;
@@ -338,19 +353,26 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		}
 		
 		// Caution : i = i + 1.
-		backsolve(H, s, y, N, max_iter, i-1);
+		i = i - 1;
+		backsolve(H, s, y, N, max_iter, i);
 		for(j=0; j<N; j++)
 		{
-			for(k=0; k<=i-1; k++)
+			for (l=0; l<N; l++)
 			{
-				x[j] += Q[(max_iter+1)*j+k]*y[k];
+				for(k=0; k<=i; k++)
+				{
+					x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+				}
 			}
 		}
-		matrix_vector(A, x, tempv, N);
-		for (j=0; j<N; j++)	r[j] = b[j] - tempv[j];
-		beta = norm(r, N);
-		s[i] = beta;
-		resid = s[i]/normb;
+		print_matrix(x, N);
+		system("pause");
+		matrix_matrix(A, x, v, N);
+		matrix_matrix(x, A, z, N);
+		for (j=0; j<N2; j++)	r[j] = b[j] - (v[j] + z[j]);
+		beta = norm(r, N2);
+		s[i+1] = beta;
+		resid = s[i+1]/normb;
 		if ( resid < tol)	
 		{
 			printf(" resid = %e \n", resid);
