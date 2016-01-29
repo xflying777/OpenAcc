@@ -27,7 +27,8 @@
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
 void print_matrixH(double *x, int N, int k);
-void initial(double *A, double *b, double *x0, double *u, int N);
+void initial(double *A, double *b, double *x0, int N);
+void exact_solution(double *u, int N);
 void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
@@ -49,11 +50,14 @@ int main()
 	b = (double *) malloc(N*N*sizeof(double));
 	u = (double *) malloc(N*N*sizeof(double));
 	
-	initial(A, b, x, u, N);	
+	initial(A, b, x, N);
 	tol = 1.0e-4;
 	t1 = clock();
 	gmres(A, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
+	exact_solution(u, N);
+	printf(" u[%d][%d] = %f \n", N/2, N/2, u[N*N/2+N/2]);
+	printf(" x[%d][%d] = %f \n", N/2, N/2, x[N*N/2+N/2]);
 	
 	printf(" error = %e \n", error(x, u, N*N));
 	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
@@ -106,7 +110,7 @@ void print_matrixH(double *x, int max_iter, int k)
 	printf("\n");
 }
 
-void initial(double *A, double *b, double *x0, double *u, int N)
+void initial(double *A, double *b, double *x0, int N)
 {
 	int i, j;
 	double h, h2, temp, x, y;
@@ -122,7 +126,6 @@ void initial(double *A, double *b, double *x0, double *u, int N)
 			x = (1+j)*h;
 			x0[N*i+j] = 0.0;
 			A[N*i+j] = 0.0;
-			u[N*i+j] = x*y*sin(x)*sin(y);
 			b[N*i+j] = x*sin(x)*(2*cos(y) - y*sin(y)) + y*sin(y)*(2*cos(x) - x*sin(x));
 		}
 	}
@@ -137,6 +140,23 @@ void initial(double *A, double *b, double *x0, double *u, int N)
 		A[N*(i+1)+i] = temp;
 		A[N*i+(i+1)] = temp;
 	}
+}
+
+void exact_solution(double *u, int N)
+{
+	int i, j;
+	double h, x, y;
+
+	h = M_PI/(N+1);
+	for (i=0; i<N; i++)
+	{
+		y = (i+1)*h;
+		for (j=0; j<N; j++)	
+		{
+			x = (j+1)*h;
+			u[N*i+j] = x*y*sin(x)*sin(y);
+		}
+	}	
 }
 
 double norm(double *x, int N)
@@ -284,26 +304,26 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	  		for (k=0; k<=i; k++) 
 			{
 				q_subQ(q, Q, N2, k);
-	    		H[max_iter*k+i] = inner_product(q, w, N2);
-	    		w_shift(w, q, H[max_iter*k+i], N2);
+				H[max_iter*k+i] = inner_product(q, w, N2);
+				w_shift(w, q, H[max_iter*k+i], N2);
 	  		}
 	  		
-			H[max_iter*(i+1)+i] = norm(w, N2);
-			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
+		H[max_iter*(i+1)+i] = norm(w, N2);
+		subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 			
 	    	for (k = 0; k < i; k++)
 	      	{
 	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
 	      		temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
-				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
-				H[max_iter*k+i] = temp;
-			}
+			H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
+			H[max_iter*k+i] = temp;
+		}
 			
 	      	GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
 	      	
 	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
-			H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
-			H[max_iter*(i+1)+i] = 0.0;
+		H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
+		H[max_iter*(i+1)+i] = 0.0;
 			
 	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
 	      	temp = cs[i]*s[i];
@@ -312,27 +332,26 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	      	resid = fabs(s[i+1]/beta);
 	     	
 	     	if (resid < tol) 
+		{
+			printf(" resid = %e \n", resid);
+			printf(" Converges at %d cycle %d step. \n", m, i+1);
+			backsolve(H, s, y, N, max_iter, i);
+			for(j=0; j<N; j++)
 			{
-				printf(" resid = %e \n", resid);
-				printf(" Converges at %d step ", i+1);
-				backsolve(H, s, y, N, max_iter, i);
-				for(j=0; j<N; j++)
+				for (l=0; l<N; l++)
 				{
-					for (l=0; l<N; l++)
+					for(k=0; k<=i; k++)
 					{
-						for(k=0; k<=i; k++)
-						{
-							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
-						}
+						x[N*j+l] += Q[N2*k+N*j+l]*y[k];
 					}
 				}
-				break;
+			}
+			break;
 	      	}
 		}//end inside for
 		
 		if (resid < tol)	
 		{
-			printf(" %d cycle \n", m);
 			break;
 		}
 		
@@ -362,17 +381,6 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			break;
 		}
 	}//end outside for
-	free(Q);
-	free(H);
-	free(r);
-	free(q);
-	free(v);
-	free(z);
-	free(w);
-	free(cs);
-	free(sn);
-	free(s);
-	free(y);
 }
 
 
