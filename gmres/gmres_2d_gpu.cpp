@@ -144,6 +144,7 @@ double norm(double *x, int N)
 	int i;
 	double norm;
 	norm=0.0;
+	#pragma acc parallel loop seq present(x[0:N])
 	for(i=0; i<N; i++)
 	{
 		norm += x[i]*x[i];
@@ -157,6 +158,7 @@ double inner_product(double *x, double *y, int N)
 	int i;
 	double temp;
 	temp = 0.0;
+	#pragma acc parallel loop seq presnet(x, y)
 	for(i=0; i<N; i++)
 	{
 		temp += x[i]*y[i];
@@ -167,11 +169,14 @@ double inner_product(double *x, double *y, int N)
 void matrix_matrix(double *A, double *x, double *b, int N)
 {
 	int i, j, k;
+	#pragma acc parallel loop independent present(A, x, b)
 	for (i=0; i<N; i++)
 	{
+		#pragma acc loop independent
 		for (j=0; j<N; j++)
 		{
 			b[N*i+j] = 0.0;
+			#pragma acc loop seq
 			for (k=0; k<N; k++)
 			{
 				b[N*i+j] += A[N*i+k]*x[N*k+j];
@@ -183,6 +188,7 @@ void matrix_matrix(double *A, double *x, double *b, int N)
 void q_subQ(double *q, double *Q, int N, int iter)
 {
 	int i;
+	#pragma acc parallel loop independent present(Q, q)
 	for (i=0; i<N; i++)	q[i] = Q[N*iter+i];
 }
 
@@ -190,12 +196,14 @@ void subQ_v(double *Q, double *v, int N, int iter, double norm_v)
 {
 	int i, N2;
 	N2 = N*iter;
+	#pragma acc parallel loop independent present(Q, v)
 	for (i=0; i<N; i++)	Q[N2+i] = v[i]/norm_v;
 }
 
 void w_shift(double *v, double *q, double h, int N)
 {
 	int i;
+	#pragma acc parallel loop independent present(v, q)
 	for(i=0; i<N; i++)
 	{
 		v[i] -= h*q[i];
@@ -247,30 +255,34 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	int i, j, k, l, m, N2;
 	double resid, normb, beta, temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
 	
-	Q = (double *) malloc(N*N*(max_iter+1)*sizeof(double));
+	N2 = N*N;
+	Q = (double *) malloc(N2*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
-	r = (double *) malloc(N*N*sizeof(double));
-	q = (double *) malloc(N*N*sizeof(double));
-	v = (double *) malloc(N*N*sizeof(double));
-	z = (double *) malloc(N*N*sizeof(double));
-	w = (double *) malloc(N*N*sizeof(double));
+	r = (double *) malloc(N2*sizeof(double));
+	q = (double *) malloc(N2*sizeof(double));
+	v = (double *) malloc(N2*sizeof(double));
+	z = (double *) malloc(N2*sizeof(double));
+	w = (double *) malloc(N2*sizeof(double));
 	cs = (double *) malloc((max_iter+1)*sizeof(double));
 	sn = (double *) malloc((max_iter+1)*sizeof(double));
 	s = (double *) malloc((max_iter+1)*sizeof(double));
 	y = (double *) malloc((max_iter+1)*sizeof(double));
 	
-	N2 = N*N;
+	#pragma acc data create(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], r[0:N2], q[0:N2], v[0:N2], z[0:N2], w[0:N2], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1], y[0:max_iter+1])
+	{
 	normb = norm(b, N2);
 	
 	matrix_matrix(A, x, v, N);
 	matrix_matrix(x, A, z, N);
+	#pragma acc parallel loop independent
 	for (i=0; i<N2; i++)	r[i] = b[i] - (v[i] + z[i]);
 	beta = norm(r, N2);
 	
 	for (m=0; m<max_restart; m++)
 	{
-
+		#pragma acc parallel loop independent
 		for (i=0; i<N2; i++)	Q[i] = r[i]/beta;
+		#pragma acc parallel loop independent
 		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
 		s[0] = beta;
 		
@@ -279,6 +291,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	  		q_subQ(q, Q, N2, i);	
 	  		matrix_matrix(A, q, v, N);
 	  		matrix_matrix(q, A, z, N);
+	  		#pragma acc parallel loop independent
 	  		for (j=0; j<N2; j++)	w[j] = v[j] + z[j];
 	  		
 	  		for (k=0; k<=i; k++) 
@@ -291,6 +304,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			H[max_iter*(i+1)+i] = norm(w, N2);
 			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 			
+			#pragma acc kernels
 	    	for (k = 0; k < i; k++)
 	      	{
 	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
@@ -316,10 +330,13 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				printf(" resid = %e \n", resid);
 				printf(" Converges at %d step ", i+1);
 				backsolve(H, s, y, N, max_iter, i);
+				#pragma acc parallel loop independent
 				for(j=0; j<N; j++)
 				{
+					#pragma acc loop independent
 					for (l=0; l<N; l++)
 					{
+						#pragma acc loop seq
 						for(k=0; k<=i; k++)
 						{
 							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
@@ -339,10 +356,13 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		// Caution : i = i + 1.
 		i = i - 1;
 		backsolve(H, s, y, N, max_iter, i);
+		#pragma acc parallel loop independent
 		for(j=0; j<N; j++)
 		{
+			#pragma acc loop independent
 			for (l=0; l<N; l++)
 			{
+				#pragma acc loop seq
 				for(k=0; k<=i; k++)
 				{
 					x[N*j+l] += Q[N2*k+N*j+l]*y[k];
@@ -351,6 +371,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		}
 		matrix_matrix(A, x, v, N);
 		matrix_matrix(x, A, z, N);
+		#pragma acc parallel loop independent
 		for (j=0; j<N2; j++)	r[j] = b[j] - (v[j] + z[j]);
 		beta = norm(r, N2);
 		s[i+1] = beta;
@@ -362,6 +383,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			break;
 		}
 	}//end outside for
+	}//end pragma acc data
 }
 
 
