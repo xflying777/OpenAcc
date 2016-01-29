@@ -158,7 +158,7 @@ double inner_product(double *x, double *y, int N)
 	int i;
 	double temp;
 	temp = 0.0;
-	#pragma acc parallel loop seq presnet(x, y)
+	#pragma acc parallel loop seq present(x, y)
 	for(i=0; i<N; i++)
 	{
 		temp += x[i]*y[i];
