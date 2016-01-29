@@ -27,7 +27,8 @@
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
 void print_matrixH(double *x, int N, int k);
-void initial(double *A, double *b, double *x0, double *u, int N);
+void initial(double *A, double *b, double *x0, int N);
+void exact_solution(double *u, int N);
 void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
@@ -49,11 +50,12 @@ int main()
 	b = (double *) malloc(N*N*sizeof(double));
 	u = (double *) malloc(N*N*sizeof(double));
 	
-	initial(A, b, x, u, N);	
+	initial(A, b, x, N);	
 	tol = 1.0e-4;
 	t1 = clock();
 	gmres(A, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
+	exact_solution(u, N);
 	
 	printf(" error = %e \n", error(x, u, N*N));
 	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
@@ -106,7 +108,7 @@ void print_matrixH(double *x, int max_iter, int k)
 	printf("\n");
 }
 
-void initial(double *A, double *b, double *x0, double *u, int N)
+void initial(double *A, double *b, double *x0, int N)
 {
 	int i, j;
 	double h, h2, temp, x, y;
@@ -122,7 +124,6 @@ void initial(double *A, double *b, double *x0, double *u, int N)
 			x = (1+j)*h;
 			x0[N*i+j] = 0.0;
 			A[N*i+j] = 0.0;
-			u[N*i+j] = x*y*sin(x)*sin(y);
 			b[N*i+j] = x*sin(x)*(2*cos(y) - y*sin(y)) + y*sin(y)*(2*cos(x) - x*sin(x));
 		}
 	}
@@ -139,6 +140,22 @@ void initial(double *A, double *b, double *x0, double *u, int N)
 	}
 }
 
+void exact_solution(double *u, int N)
+{
+	int i, j;
+	double h, x, y;
+
+	h = M_PI/(N+1);
+	for (i=0; i<N; i++)
+	{
+		y = (i+1)*h;
+		for (j=0; j<N; j++)
+		{
+			x = (j+1)*h;
+			u[N*i+j] = x*y*sin(x)*sin(y);
+		}
+	}
+}
 double norm(double *x, int N)
 {
 	int i;
