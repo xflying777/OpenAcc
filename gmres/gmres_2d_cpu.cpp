@@ -362,6 +362,17 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			break;
 		}
 	}//end outside for
+	free(Q);
+	free(H);
+	free(r);
+	free(q);
+	free(v);
+	free(z);
+	free(w);
+	free(cs);
+	free(sn);
+	free(s);
+	free(y);
 }
 
 
