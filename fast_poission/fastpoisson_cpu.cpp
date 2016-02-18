@@ -61,7 +61,9 @@ void Exact_Solution(double **U, int N)
 	// put the exact solution 
 	int i,j;
 	double x, y, h;
-	h = 1.0/N;
+	
+	//h = 1.0/N;
+	h = M_PI/N;
 	for(i=0;i<N-1;++i)
 	{
 		x = (i+1)*h;
@@ -69,7 +71,8 @@ void Exact_Solution(double **U, int N)
 		{
 			//k = j + i*(N-1);
 			y = (j+1)*h;
-			U[i][j] = sin(M_PI*x)*sin(2*M_PI*y);
+			//U[i][j] = sin(M_PI*x)*sin(2*M_PI*y);
+			U[i][j] = x*y*sin(x)*sin(y);
 		}
 	}
 }
@@ -77,7 +80,9 @@ void Exact_Source(double **F, int N)
 {
 	int i,j;
 	double x, y, h;
-	h = 1.0/N;
+	
+	//h = 1.0/N;
+	h = M_PI/N;
 	for(i=0;i<N-1;++i)
 	{
 		x = (i+1)*h;
@@ -85,7 +90,8 @@ void Exact_Source(double **F, int N)
 		{
 			//k = j + i*(N-1);
 			y = (j+1)*h;
-			F[i][j] = -(1.0+4.0)*h*h*M_PI*M_PI*sin(M_PI*x)*sin(2*M_PI*y);
+			//F[i][j] = -(1.0+4.0)*h*h*M_PI*M_PI*sin(M_PI*x)*sin(2*M_PI*y);
+			F[i][j] = -h*h*(x*sin(x)*(2*cos(y) - y*sin(y)) + y*sin(y)*(2*cos(x) - x*sin(x)));
 		}
 	}	
 }
@@ -235,7 +241,7 @@ void Fast_Poisson_Solver(double **F, double **X, int N)
 	for(i=1;i<N;++i) Xbar[i] = Xbar[i-1] + N;
 		
 	lamda = (double *) malloc(N*sizeof(double));
-	h = 1.0/(N+1);
+	h = M_PI/(N+1);
 	
 	for(i=0;i<N;i++)
 	{
@@ -250,7 +256,7 @@ void Fast_Poisson_Solver(double **F, double **X, int N)
 	{
 		for(j=0;j<N;j++) 
 		{
-			Xbar[i][j] = -F[i][j]/(lamda[i] + lamda[j]);
+			Xbar[i][j] = F[i][j]/(lamda[i] + lamda[j]);
 		}
 	}
 	
