@@ -29,21 +29,21 @@ void matrix_vector(double *A, double *x, double *b, int N);
 void print_matrixH(double *x, int N, int k);
 void initial(double *A, double *b, double *x0, int N);
 void exact_solution(double *u, int N);
-int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
+void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
 int main()
 {
 	int p, N, max_restart, max_iter;
 	clock_t t1, t2;
-	printf(" Please input N = 2^p -1, p =  ");
+	printf("\n Please input N = 2^p -1, p =  ");
 	scanf("%d", &p);
 	N = pow(2, p) - 1;
 	printf(" Please input max restart times max_restart = ");
 	scanf("%d",&max_restart);
 	printf(" Please input max iteration times max_iter = ");
 	scanf("%d",&max_iter);
-	printf(" N = %d , max_restart = %d , max_iter = %d \n \n", N, max_restart, max_iter);
+	printf("\n N = %d , max_restart = %d , max_iter = %d \n \n", N, max_restart, max_iter);
 	
 	double *A, *x, *b, *u, tol;
 	A = (double *) malloc(N*N*sizeof(double));
@@ -52,16 +52,16 @@ int main()
 	u = (double *) malloc(N*N*sizeof(double));
 	
 	initial(A, b, x, N);
-	tol = 1.0e-4;
+	tol = 1.0e-6;
 	t1 = clock();
 	gmres(A, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
 	exact_solution(u, N);
-	printf(" u[%d][%d] = %f \n", N/2, N/2, u[N*N/2+N/2]);
-	printf(" x[%d][%d] = %f \n", N/2, N/2, x[N*N/2+N/2]);
+	//printf(" u[%d][%d] = %f \n", N/2, N/2, u[N*N/2+N/2]);
+	//printf(" x[%d][%d] = %f \n", N/2, N/2, x[N*N/2+N/2]);
 	
 	printf(" error = %e \n", error(x, u, N*N));
-	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+	printf(" times = %f \n \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 	
 	return 0;
 }
@@ -415,7 +415,7 @@ void fastpoisson(double *b, double *x, int N)
 //****************************************************************************
 
 
-int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
+void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
 	int i, j, k, l, m, N2;
 	double resid, normb, beta, temp, *M_temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
@@ -474,27 +474,27 @@ int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter,
 			H[max_iter*(i+1)+i] = norm(w, N2);
 			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 			
-	    	for (k = 0; k < i; k++)
-	      	{
-	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+			for (k = 0; k < i; k++)
+			{
+				//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
 				temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
 				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
 				H[max_iter*k+i] = temp;
 			}
 			
-	      	GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
+			GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
 	      	
-	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+			//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
 			H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
 			H[max_iter*(i+1)+i] = 0.0;
 			
-	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-	      	temp = cs[i]*s[i];
-	      	s[i+1] = -1.0*sn[i]*s[i];
-	      	s[i] = temp;
-	      	resid = fabs(s[i+1]/beta);
+			//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+			temp = cs[i]*s[i];
+			s[i+1] = -1.0*sn[i]*s[i];
+			s[i] = temp;
+			resid = fabs(s[i+1]/beta);
 	     	
-	     	if (resid < tol) 
+			if (resid < tol) 
 			{
 				backsolve(H, s, y, N, max_iter, i);
 				for(j=0; j<N; j++)
@@ -508,7 +508,7 @@ int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter,
 					}
 				}
 				break;
-	      	}
+			}
 		}//end inside for
 		
 		if (resid < tol)	
@@ -542,7 +542,6 @@ int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter,
 		{
 			printf(" resid = %e \n", resid);
 			printf(" Converges at %d cycle %d step. \n", m, i);
-			return 0;
 			break;
 		}
 	}//end outside for
