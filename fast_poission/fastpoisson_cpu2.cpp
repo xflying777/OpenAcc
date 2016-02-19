@@ -53,7 +53,7 @@ double error(double *u, double *x, int N)
 void initial(double *u, double *b, int N)
 {
 	int i, j;
-	double h, h2, x, y;
+	double h, x, y;
 	
 	h = 1.0/(N+1);
 	
@@ -160,12 +160,15 @@ void fdst(double *x, int N)
 void fast_poisson_solver(double *b, double *x, int N)
 {
 	int i, j;
-	double h, h2, *lamda, *temp;
+	double h, h2, *lamda, *temp, *tempb;
 
+	tempb = (double *) malloc(N*N*sizeof(double));
 	temp = (double *) malloc(N*sizeof(double));
 	lamda = (double *) malloc(N*sizeof(double));
 	h = 1.0/(N+1);
 	h2 = h*h;
+	
+	for (i=0; i<N*N; i++)	tempb[i] = b[i];
 
 	for(i=0; i<N; i++)
 	{
@@ -174,23 +177,23 @@ void fast_poisson_solver(double *b, double *x, int N)
 	
 	for (i=0; i<N; i++)
 	{
-		for (j=0; j<N; j++)	temp[j] = b[N*i+j];
+		for (j=0; j<N; j++)	temp[j] = tempb[N*i+j];
 		fdst(temp, N);
-		for (j=0; j<N; j++)	b[N*i+j] = temp[j];
+		for (j=0; j<N; j++)	tempb[N*i+j] = temp[j];
 	}
 	
 	for (i=0; i<N; i++)
 	{
-		for (j=0; j<N; j++)	temp[j] = b[N*j+i];
+		for (j=0; j<N; j++)	temp[j] = tempb[N*j+i];
 		fdst(temp, N);
-		for (j=0; j<N; j++)	b[N*j+i] = temp[j];
+		for (j=0; j<N; j++)	tempb[N*j+i] = temp[j];
 	}
 	
 	for(i=0; i<N; i++)
 	{
 		for(j=0; j<N; j++) 
 		{
-			x[N*i+j] = -1.0*h2*b[N*i+j]/(lamda[i] + lamda[j]);
+			x[N*i+j] = -1.0*h2*tempb[N*i+j]/(lamda[i] + lamda[j]);
 		}
 	}
 	

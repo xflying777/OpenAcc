@@ -29,15 +29,16 @@ void matrix_vector(double *A, double *x, double *b, int N);
 void print_matrixH(double *x, int N, int k);
 void initial(double *A, double *b, double *x0, int N);
 void exact_solution(double *u, int N);
-void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
+int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
 int main()
 {
-	int N, max_restart, max_iter;
+	int p, N, max_restart, max_iter;
 	clock_t t1, t2;
-	printf(" Please input N =  ");
-	scanf("%d",&N);
+	printf(" Please input N = 2^p -1, p =  ");
+	scanf("%d", &p);
+	N = pow(2, p) - 1;
 	printf(" Please input max restart times max_restart = ");
 	scanf("%d",&max_restart);
 	printf(" Please input max iteration times max_iter = ");
@@ -117,7 +118,7 @@ void initial(double *A, double *b, double *x0, int N)
 	int i, j;
 	double h, h2, temp, x, y;
 	
-	h = M_PI/(N+1);
+	h = 1.0/(N+1);
 	h2 = h*h;
 	
 	for(i=0; i<N; i++)
@@ -128,7 +129,7 @@ void initial(double *A, double *b, double *x0, int N)
 			x = (1+j)*h;
 			x0[N*i+j] = 0.0;
 			A[N*i+j] = 0.0;
-			b[N*i+j] = x*sin(x)*(2*cos(y) - y*sin(y)) + y*sin(y)*(2*cos(x) - x*sin(x));
+			b[N*i+j] = x*sin(M_PI*x)*(2*M_PI*cos(M_PI*y) - M_PI*M_PI*y*sin(M_PI*y)) + y*sin(M_PI*y)*(2*M_PI*cos(M_PI*x) - M_PI*M_PI*x*sin(M_PI*x));
 		}
 	}
 	temp = -2.0/h2;
@@ -149,14 +150,14 @@ void exact_solution(double *u, int N)
 	int i, j;
 	double h, x, y;
 
-	h = M_PI/(N+1);
+	h = 1.0/(N+1);
 	for (i=0; i<N; i++)
 	{
 		y = (i+1)*h;
 		for (j=0; j<N; j++)	
 		{
 			x = (j+1)*h;
-			u[N*i+j] = x*y*sin(x)*sin(y);
+			u[N*i+j] = x*y*sin(M_PI*x)*sin(M_PI*y);
 		}
 	}	
 }
@@ -272,8 +273,9 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 void fdst(double *x, int N)
 {
 	int i, j, k, n, M, K;
-	double t_r, t_i, *x_r, *x_i, *y_r, *y_i;
+	double s, t_r, t_i, *x_r, *x_i, *y_r, *y_i;
 	
+	s = sqrt(2.0/(N+1));
 	K = 2*N + 2;	
 	x_r = (double *) malloc(N*sizeof(double));
 	x_i = (double *) malloc(N*sizeof(double));
@@ -350,28 +352,23 @@ void fdst(double *x, int N)
 	// After fft(y[k]), Y[k] = fft(y[k]), Sx[k] = i*Y[k+1]/2
 	for(k=0;k<N;k++)
 	{
-		x[k] = -1.0*y_i[k+1]/2;
+		x[k] = -1.0*s*y_i[k+1]/2;
 	}
 	
 }
 
-void idst(double *x, int N)
-{
-	int i;
-	double s;
-	s = 2.0/(N+1);
-	fdst(x, N);
-	for(i=0;i<N;i++) x[i] = s*x[i];
-}
-
-void fast_poisson_solver(double *b, double *x, int N)
+void fastpoisson(double *b, double *x, int N)
 {
 	int i, j;
-	double h, *lamda, *temp;
+	double h, h2, *lamda, *temp, *tempb;
 
+	tempb = (double *) malloc(N*N*sizeof(double));
 	temp = (double *) malloc(N*sizeof(double));
 	lamda = (double *) malloc(N*sizeof(double));
 	h = 1.0/(N+1);
+	h2 = h*h;
+	
+	for(i=0; i<N*N; i++)	tempb[i] = b[i];
 
 	for(i=0; i<N; i++)
 	{
@@ -380,32 +377,52 @@ void fast_poisson_solver(double *b, double *x, int N)
 	
 	for (i=0; i<N; i++)
 	{
-		for (j=0; j<N; j++)
-		{
-			temp[j] = b[N*i+j];
-		}
+		for (j=0; j<N; j++)	temp[j] = tempb[N*i+j];
+		fdst(temp, N);
+		for (j=0; j<N; j++)	tempb[N*i+j] = temp[j];
+	}
+	
+	for (i=0; i<N; i++)
+	{
+		for (j=0; j<N; j++)	temp[j] = tempb[N*j+i];
+		fdst(temp, N);
+		for (j=0; j<N; j++)	tempb[N*j+i] = temp[j];
 	}
 	
 	for(i=0; i<N; i++)
 	{
 		for(j=0; j<N; j++) 
 		{
-			x[N*i+j] = -b[N*i+j]/(lamda[i] + lamda[j]);
+			x[N*i+j] = -1.0*h2*tempb[N*i+j]/(lamda[i] + lamda[j]);
 		}
 	}
 	
+	for (i=0; i<N; i++)
+	{
+		for (j=0; j<N; j++)	temp[j] = x[N*i+j];
+		fdst(temp, N);
+		for (j=0; j<N; j++)	x[N*i+j] = temp[j];
+	}
+	
+	for (i=0; i<N; i++)
+	{
+		for (j=0; j<N; j++)	temp[j] = x[N*j+i];
+		fdst(temp, N);
+		for (j=0; j<N; j++)	x[N*j+i] = temp[j];
+	}
 }
 
 //****************************************************************************
 
 
-void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
+int gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
 	int i, j, k, l, m, N2;
-	double resid, normb, beta, temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
+	double resid, normb, beta, temp, *M_temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
 	
 	Q = (double *) malloc(N*N*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
+	M_temp = (double *) malloc(N*N*sizeof(double));
 	r = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
 	v = (double *) malloc(N*N*sizeof(double));
@@ -417,12 +434,20 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	y = (double *) malloc((max_iter+1)*sizeof(double));
 	
 	N2 = N*N;
-	normb = norm(b, N2);
+	fastpoisson(b, M_temp, N);
+	normb = norm(M_temp, N2);
 	
 	matrix_matrix(A, x, v, N);
 	matrix_matrix(x, A, z, N);
-	for (i=0; i<N2; i++)	r[i] = b[i] - (v[i] + z[i]);
+	for (i=0; i<N2; i++)	M_temp[i] = b[i] - (v[i] + z[i]);
+	fastpoisson(M_temp, r, N);
 	beta = norm(r, N2);
+	
+	if ((resid = beta / normb) <= tol) 
+	{
+		tol = resid;
+		max_iter = 0;
+  	}
 	
 	for (m=0; m<max_restart; m++)
 	{
@@ -436,7 +461,8 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	  		q_subQ(q, Q, N2, i);	
 	  		matrix_matrix(A, q, v, N);
 	  		matrix_matrix(q, A, z, N);
-	  		for (j=0; j<N2; j++)	w[j] = v[j] + z[j];
+	  		for (j=0; j<N2; j++)	M_temp[j] = v[j] + z[j];
+	  		fastpoisson(M_temp, w, N);
 	  		
 	  		for (k=0; k<=i; k++) 
 			{
@@ -470,8 +496,6 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	     	
 	     	if (resid < tol) 
 			{
-				printf(" resid = %e \n", resid);
-				printf(" Converges at %d cycle %d step. \n", m, i+1);
 				backsolve(H, s, y, N, max_iter, i);
 				for(j=0; j<N; j++)
 				{
@@ -489,6 +513,8 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		
 		if (resid < tol)	
 		{
+			printf(" resid = %e \n", resid);
+			printf(" Converges at %d cycle %d step. \n", m, i+1);
 			break;
 		}
 		
@@ -507,7 +533,8 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		}
 		matrix_matrix(A, x, v, N);
 		matrix_matrix(x, A, z, N);
-		for (j=0; j<N2; j++)	r[j] = b[j] - (v[j] + z[j]);
+		for (j=0; j<N2; j++)	M_temp[j] = b[j] - (v[j] + z[j]);
+		fastpoisson(M_temp, r, N);
 		beta = norm(r, N2);
 		s[i+1] = beta;
 		resid = s[i+1]/normb;
@@ -515,6 +542,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		{
 			printf(" resid = %e \n", resid);
 			printf(" Converges at %d cycle %d step. \n", m, i);
+			return 0;
 			break;
 		}
 	}//end outside for
