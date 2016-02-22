@@ -2,7 +2,7 @@
 // Iterative template routine -- GMRES
 //
 // GMRES solves the unsymmetric linear system Ax = b using the 
-// Generalized Minimum Residual method
+// Generalized Minimum Residual method. (A = M + D)
 //
 // GMRES follows the algorithm described on p. 20 of the 
 // SIAM Templates book.
@@ -27,9 +27,12 @@
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
 void print_matrixH(double *x, int N, int k);
-void initial(double *A, double *b, double *x0, int N);
+void initial_x(double *x, int N);
+void initial_A(double *A, int N);
+void initial_D(double *D, int N);
+void source(double *b, int N);
 void exact_solution(double *u, int N);
-void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol);
+void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
 int main()
@@ -45,16 +48,21 @@ int main()
 	scanf("%d",&max_iter);
 	printf("\n N = %d , max_restart = %d , max_iter = %d \n \n", N, max_restart, max_iter);
 	
-	double *A, *x, *b, *u, tol;
+	double *A, *D, *x, *b, *u, tol;
 	A = (double *) malloc(N*N*sizeof(double));
+	D = (double *) malloc(N*N*sizeof(double));
 	x = (double *) malloc(N*N*sizeof(double));
 	b = (double *) malloc(N*N*sizeof(double));
 	u = (double *) malloc(N*N*sizeof(double));
 	
-	initial(A, b, x, N);
+	initial_x(x, N);
+	initial_A(A, N);
+	initial_D(D, N);
+	source(b, N);
+
 	tol = 1.0e-6;
 	t1 = clock();
-	gmres(A, x, b, N, max_restart, max_iter, tol);
+	gmres(A, D, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
 	exact_solution(u, N);
 	//printf(" u[%d][%d] = %f \n", N/2, N/2, u[N*N/2+N/2]);
@@ -113,25 +121,23 @@ void print_matrixH(double *x, int max_iter, int k)
 	printf("\n");
 }
 
-void initial(double *A, double *b, double *x0, int N)
+void initial_x(double *x, int N)
 {
-	int i, j;
-	double h, h2, temp, x, y;
+	int i;
+
+	for (i=0; i<N*N; i++)	x[i] = 0.0;
+}
+
+void initial_A(double *A, int N)
+{
+	int i;
+	double h, h2, temp;
 	
 	h = 1.0/(N+1);
 	h2 = h*h;
 	
-	for(i=0; i<N; i++)
-	{
-		y = (1+i)*h;
-		for(j=0; j<N; j++)
-		{
-			x = (1+j)*h;
-			x0[N*i+j] = 0.0;
-			A[N*i+j] = 0.0;
-			b[N*i+j] = x*sin(M_PI*x)*(2*M_PI*cos(M_PI*y) - M_PI*M_PI*y*sin(M_PI*y)) + y*sin(M_PI*y)*(2*M_PI*cos(M_PI*x) - M_PI*M_PI*x*sin(M_PI*x));
-		}
-	}
+	for(i=0; i<N*N; i++)	A[i] = 0.0;
+
 	temp = -2.0/h2;
 	for(i=0; i<N; i++)
 	{			
@@ -142,6 +148,22 @@ void initial(double *A, double *b, double *x0, int N)
 	{
 		A[N*(i+1)+i] = temp;
 		A[N*i+(i+1)] = temp;
+	}
+}
+
+void initial_D(double *D, int N)
+{
+	int i;
+	double h, temp;
+	h = 1.0/(N+1);
+
+	for (i=0; i<N*N; i++)	D[i] = 0.0;
+
+	temp = 1.0/(2*h);
+	for (i=0; i<N-1; i++)
+	{
+		D[N*(i+1)+i] = -1.0*temp;
+		D[N*i+(i+1)] = temp;
 	}
 }
 
@@ -158,6 +180,23 @@ void exact_solution(double *u, int N)
 		{
 			x = (j+1)*h;
 			u[N*i+j] = x*y*sin(M_PI*x)*sin(M_PI*y);
+		}
+	}	
+}
+
+void source(double *b, int N)
+{
+	int i, j;
+	double h, x, y;
+
+	h = 1.0/(N+1);
+	for (i=0; i<N; i++)
+	{
+		y = (i+1)*h;
+		for (j=0; j<N; j++)	
+		{
+			x = (j+1)*h;
+			b[N*i+j] = (x*sin(M_PI*x)*(2*M_PI*cos(M_PI*y) - M_PI*M_PI*y*sin(M_PI*y)) + y*sin(M_PI*y)*(2*M_PI*cos(M_PI*x) - M_PI*M_PI*x*sin(M_PI*x))) + (x*sin(M_PI*x)*(sin(M_PI*y) + M_PI*y*cos(M_PI*y)));
 		}
 	}	
 }
@@ -415,18 +454,18 @@ void fastpoisson(double *b, double *x, int N)
 //****************************************************************************
 
 
-void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
+void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
 	int i, j, k, l, m, N2;
-	double resid, normb, beta, temp, *M_temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
+	double resid, normb, beta, temp, *M_temp, *r, *q, *v, *M_b, *w, *cs, *sn, *s, *y, *Q, *H;
 	
 	Q = (double *) malloc(N*N*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
 	M_temp = (double *) malloc(N*N*sizeof(double));
+	M_b = (double *) malloc(N*N*sizeof(double));
 	r = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
 	v = (double *) malloc(N*N*sizeof(double));
-	z = (double *) malloc(N*N*sizeof(double));
 	w = (double *) malloc(N*N*sizeof(double));
 	cs = (double *) malloc((max_iter+1)*sizeof(double));
 	sn = (double *) malloc((max_iter+1)*sizeof(double));
@@ -434,13 +473,11 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	y = (double *) malloc((max_iter+1)*sizeof(double));
 	
 	N2 = N*N;
-	fastpoisson(b, M_temp, N);
-	normb = norm(M_temp, N2);
-	
-	matrix_matrix(A, x, v, N);
-	matrix_matrix(x, A, z, N);
-	for (i=0; i<N2; i++)	M_temp[i] = b[i] - (v[i] + z[i]);
-	fastpoisson(M_temp, r, N);
+
+	fastpoisson(b, M_b, N);
+	normb = norm(M_b, N2);
+
+	for (k=0; k<N2; k++)	r[k] = M_b[k];
 	beta = norm(r, N2);
 	
 	if ((resid = beta / normb) <= tol) 
@@ -458,11 +495,10 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 		
 		for (i = 0; i<max_iter; i++) 
 		{
-	  		q_subQ(q, Q, N2, i);	
-	  		matrix_matrix(A, q, v, N);
-	  		matrix_matrix(q, A, z, N);
-	  		for (j=0; j<N2; j++)	M_temp[j] = v[j] + z[j];
-	  		fastpoisson(M_temp, w, N);
+	  		q_subQ(q, Q, N2, i);
+	  		matrix_matrix(D, q, v, N);
+			fastpoisson(v, M_temp, N);
+	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
 	  		
 	  		for (k=0; k<=i; k++) 
 			{
@@ -531,10 +567,10 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				}
 			}
 		}
-		matrix_matrix(A, x, v, N);
-		matrix_matrix(x, A, z, N);
-		for (j=0; j<N2; j++)	M_temp[j] = b[j] - (v[j] + z[j]);
-		fastpoisson(M_temp, r, N);
+
+		matrix_matrix(D, x, v, N);
+		fastpoisson(v, M_temp, N);
+		for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
 		beta = norm(r, N2);
 		s[i+1] = beta;
 		resid = s[i+1]/normb;
