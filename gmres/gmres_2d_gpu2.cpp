@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <cufft.h>
+#include "openacc.h"
 
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
@@ -231,11 +233,14 @@ double inner_product(double *x, double *y, int N)
 void matrix_matrix(double *A, double *x, double *b, int N)
 {
 	int i, j, k;
+	#pragma acc parallel loop independent copyin(A[0:N*N], x[0:N*N]) copyout(b[0:N*N])
 	for (i=0; i<N; i++)
 	{
+		#pragma acc loop independent
 		for (j=0; j<N; j++)
 		{
 			b[N*i+j] = 0.0;
+			#pragma acc loop seq
 			for (k=0; k<N; k++)
 			{
 				b[N*i+j] += A[N*i+k]*x[N*k+j];
@@ -389,9 +394,9 @@ void transpose(double *data_in, double *data_out, int Nx, int Ny)
 
 void fastpoisson(double *b, double *x, int N) 
 { 
-	int i, j; 
-	double h, h2, Nx, Ny, Lx, *lamda, *temp, *temp_b, *data2, *data3; 
-	
+	int i, j, Nx, Ny, Lx;
+	double h, h2, *lamda, *temp, *temp_b, *data2, *data3;
+
 	Nx = Ny = N;
 	Lx = 2*Nx + 2;
 	data2 = (double *) malloc(Lx*Ny*sizeof(double));
