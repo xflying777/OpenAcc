@@ -25,6 +25,7 @@
 #include <time.h>
 #include <cufft.h>
 #include "openacc.h"
+#include "cublas_v2.h"
 
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
@@ -245,6 +246,37 @@ void matrix_matrix(double *A, double *x, double *b, int N)
 			{
 				b[N*i+j] += A[N*i+k]*x[N*k+j];
 			}
+		}
+	}
+}
+
+// Note : cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, A, n, B, n, &beta, C, n)
+// means matrix C = B * A
+void cublas(int n, double *c, double *b, double *a )
+{
+	cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
+	#pragma acc data pcopyin(a[0:n*n], b[0:n*n]) pcopyout(c[0:n*n])
+	{
+		#pragma acc host_data use_device( a, b, c )
+		{
+			cublasHandle_t handle;
+			stat = cublasCreate(&handle);
+			if ( CUBLAS_STATUS_SUCCESS != stat ) 
+			{
+				printf("CUBLAS initialization failed\n");
+			}
+			
+			if ( CUBLAS_STATUS_SUCCESS == stat )
+			{
+				const double alpha = 1.0;
+				const double beta = 0.0;
+				stat = cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n);
+				if (stat != CUBLAS_STATUS_SUCCESS) 
+				{
+					printf("cublasDgemm failed\n");
+				}
+			}
+			cublasDestroy(handle);
 		}
 	}
 }
@@ -481,7 +513,8 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		for (i = 0; i<max_iter; i++) 
 		{
 	  		q_subQ(q, Q, N2, i);
-	  		matrix_matrix(D, q, v, N);
+	  		//matrix_matrix(D, q, v, N);
+	  		cubla(N, v, D, q);
 			fastpoisson(v, M_temp, N);
 	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
 	  		
@@ -518,13 +551,10 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			if (resid < tol) 
 			{
 				backsolve(H, s, y, N, max_iter, i);
-				#pragma acc parallel loop independent copyin(Q[0:N*N*(max_iter+1)], y[0:max_iter+1]) copyout(x[0:N*N])
 				for(j=0; j<N; j++)
 				{
-					#pragma acc loop independent
 					for (l=0; l<N; l++)
 					{
-						#pragma acc loop seq
 						for(k=0; k<=i; k++)
 						{
 							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
@@ -545,13 +575,10 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		// Caution : i = i + 1.
 		i = i - 1;
 		backsolve(H, s, y, N, max_iter, i);
-		#pragma acc parallel loop independent copyin(Q[0:N*N*(max_iter+1)], y[0:max_iter+1]) copyout(x[0:N*N])
 		for(j=0; j<N; j++)
 		{
-			#pragma acc loop independent
 			for (l=0; l<N; l++)
 			{
-				#pragma acc loop seq
 				for(k=0; k<=i; k++)
 				{
 					x[N*j+l] += Q[N2*k+N*j+l]*y[k];
@@ -559,7 +586,8 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			}
 		}
 
-		matrix_matrix(D, x, v, N);
+		//matrix_matrix(D, x, v, N);
+		cublas(N, v, D, x);
 		fastpoisson(v, M_temp, N);
 		for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
 		beta = norm(r, N2);
