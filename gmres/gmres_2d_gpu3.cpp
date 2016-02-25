@@ -138,12 +138,12 @@ void initial_A(double *A, int N)
 	
 	h = 1.0/(N+1);
 	h2 = h*h;
-	
+
 	for(i=0; i<N*N; i++)	A[i] = 0.0;
 
 	temp = -2.0/h2;
 	for(i=0; i<N; i++)
-	{			
+	{
 		A[N*i+i] = temp;
 	}
 	temp = 1.0/h2;
@@ -265,7 +265,7 @@ void cublas(int n, double *c, double *b, double *a )
 			{
 				printf("CUBLAS initialization failed\n");
 			}
-			
+
 			if ( CUBLAS_STATUS_SUCCESS == stat )
 			{
 				const double alpha = 1.0;
@@ -514,7 +514,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		{
 	  		q_subQ(q, Q, N2, i);
 	  		//matrix_matrix(D, q, v, N);
-	  		cubla(N, v, D, q);
+	  		cublas(N, v, D, q);
 			fastpoisson(v, M_temp, N);
 	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
 	  		
