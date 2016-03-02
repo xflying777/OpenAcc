@@ -308,22 +308,22 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				w_shift(w, q, H[max_iter*k+i], N2);
 	  		}
 	  		
-		H[max_iter*(i+1)+i] = norm(w, N2);
-		subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
+			H[max_iter*(i+1)+i] = norm(w, N2);
+			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 			
 	    	for (k = 0; k < i; k++)
 	      	{
 	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
 	      		temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
-			H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
-			H[max_iter*k+i] = temp;
-		}
+				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
+				H[max_iter*k+i] = temp;
+			}
 			
 	      	GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
 	      	
 	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
-		H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
-		H[max_iter*(i+1)+i] = 0.0;
+			H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
+			H[max_iter*(i+1)+i] = 0.0;
 			
 	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
 	      	temp = cs[i]*s[i];
@@ -332,26 +332,26 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	      	resid = fabs(s[i+1]/beta);
 	     	
 	     	if (resid < tol) 
-		{
-			printf(" resid = %e \n", resid);
-			printf(" Converges at %d cycle %d step. \n", m, i+1);
-			backsolve(H, s, y, N, max_iter, i);
-			for(j=0; j<N; j++)
 			{
-				for (l=0; l<N; l++)
+				backsolve(H, s, y, N, max_iter, i);
+				for(j=0; j<N; j++)
 				{
-					for(k=0; k<=i; k++)
+					for (l=0; l<N; l++)
 					{
-						x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+						for(k=0; k<=i; k++)
+						{
+							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+						}
 					}
 				}
-			}
-			break;
+				break;
 	      	}
 		}//end inside for
 		
 		if (resid < tol)	
 		{
+			printf(" resid = %e \n", resid);
+			printf(" Converges at %d cycle %d step. \n", m, i+1);
 			break;
 		}
 		

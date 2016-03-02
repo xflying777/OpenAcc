@@ -1,7 +1,7 @@
 //*****************************************************************
 // Iterative template routine -- GMRES
 //
-// GMRES solves the unsymmetric linear system Ax = b using the 
+// GMRES solves the unsymmetric linear system M^(-1).Ax = M^(-1).b using the 
 // Generalized Minimum Residual method. (A = M + D)
 //
 // GMRES follows the algorithm described on p. 20 of the 
