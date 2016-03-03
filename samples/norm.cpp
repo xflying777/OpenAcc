@@ -34,8 +34,9 @@ double norm_gpu_reduction(double *x, int N)
 double norm_gpu_cublas(const double *x, int N)
 {
 	double *nrm2;
-	*nrm2 = 0.0;
-	#pragma acc data copyin(x[0:N])
+	nrm2 = (double *) malloc(1*sizeof(double));
+
+	#pragma acc data copyin(x[0:N]) copyout(nrm2[0])
 	{
 		#pragma acc host_data use_device(x)
 		{
@@ -46,7 +47,7 @@ double norm_gpu_cublas(const double *x, int N)
 		}
 	}
 
-	return *nrm2;
+	return *nrm2 * *nrm2;
 }
 
 //******************************************************************************************************
@@ -62,14 +63,13 @@ void initial(double *x, int N)
 int main()
 {
 	int N;
-	printf(" Input N = ");
+	printf(" \n Input N = ");
 	scanf("%d", &N);
 
-	double *x, cpu, gpu_cublas, gpu_reduction, error, t1, t2, cpu_time, gpu_cublas_time, gpu_reduction_time;
+	double *x, cpu, gpu_cublas, gpu_reduction, error1, error2, t1, t2, cpu_time, gpu_cublas_time, gpu_reduction_time;
 	x = (double *) malloc(N*sizeof(double));
 
 	initial(x, N);
-	printf("\n x[1] = %f \n", x[1]);
 
 	t1 = clock();
 	cpu = norm_cpu(x, N);
@@ -83,7 +83,7 @@ int main()
 	}
 	t2 = clock();
 	gpu_cublas_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
-	
+
 	t1 = clock();
 	#pragma acc data copyin(x[0:N])
 	{
@@ -92,10 +92,11 @@ int main()
 	t2 = clock();
 	gpu_reduction_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
 
-	error = fabs((cpu - gpu_cublas) + (cpu - gpu_reduction));
+	error1 = fabs(cpu - gpu_cublas);
+	error2 = fabs(cpu - gpu_reduction);
 	printf("\n norm = %f \n", cpu);
-	printf(" error = %f \n", error);
-	printf(" cpu times = %f , gpu cublas times = %f , gpu reduction times = %f \n", cpu_time, gpu_cublas_time, gpu_reduction_time);
+	printf(" error1 = %f , error2 = %f \n \n", error1, error2);
+	printf(" cpu times = %f , gpu cublas times = %f \n gpu reduction times = %f \n", cpu_time, gpu_cublas_time, gpu_reduction_time);
 	//printf(" cpu/gpu = %f \n", cpu_time/gpu_time);
 
 	return 0;
