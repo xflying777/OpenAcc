@@ -22,7 +22,7 @@ int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 			if ( CUBLAS_STATUS_SUCCESS != stat ) {
 				printf("CUBLAS initialization failed\n");
 			}
-			
+
 			if ( CUBLAS_STATUS_SUCCESS == stat )
 			{
 				const double alpha = 1.0;
@@ -66,6 +66,7 @@ int main()
 
 	printf("Input size n = ");
 	scanf("%d",&n);
+	printf("\n");
 
 	double *a = (double*)malloc(sizeof(double)*n*n);
 	double *b = (double*)malloc(sizeof(double)*n*n);
@@ -76,10 +77,11 @@ int main()
 	{
 		for (j = 0; j < n; ++j)
 		{
-			a[i*n+j] = 1.0;
-			b[i*n+j] = 1.0/n;
+			a[i*n+j] = 1.0 + i;
+			b[i*n+j] = 1.0 - i;
 		}
 	}
+
 	t1 = clock();
 	gpu_oacc( n, a, b, c_gpu_oacc);
 	t2 = clock();
