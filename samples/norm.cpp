@@ -37,7 +37,7 @@ extern "C" double norm_gpu_cublas(const double *x, int N)
 
 	#pragma acc data copyin(x[0:N])
 	{
-//		#pragma acc host_data use_device(x)
+		#pragma acc host_data use_device(x)
 		{
 			cublasHandle_t h;
 			cublasDnrm2(h, N, x, 1, nrm2);
