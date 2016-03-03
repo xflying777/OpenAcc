@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include "cublas_v2.h"
 
 double norm_cpu(double *x, int N)
 {
@@ -29,18 +30,17 @@ double norm_gpu_reduction(double *x, int N)
 	return norm_x;
 }
 
-double norm_gpu_cublas(const double *x, int N)
+extern "C" double norm_gpu_cublas(const double *x, int N)
 {
-	double nrm2;
+	double *nrm2;
+
 	#pragma acc data copyin(x[0:N])
 	{
-		#pragma acc host_data use_device(x)
+//		#pragma acc host_data use_device(x)
 		{
-			cublasHandle_t handle;
-			int incx;
-			incx = 1;
-			cublasDnrm2(handle, N, x, incx, nrm2);
-			cublasDestroy(handle);
+			cublasHandle_t h;
+			cublasDnrm2(h, N, x, 1, nrm2);
+			cublasDestroy(h);
 		}
 	}
 	
