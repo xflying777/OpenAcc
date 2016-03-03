@@ -3,6 +3,7 @@
 #include <math.h>
 #include <time.h>
 #include "cublas_v2.h"
+#include "openacc.h"
 
 double norm_cpu(double *x, int N)
 {
