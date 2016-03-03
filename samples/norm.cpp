@@ -31,20 +31,21 @@ double norm_gpu_reduction(double *x, int N)
 	return norm_x;
 }
 
-extern "C" double norm_gpu_cublas(const double *x, int N)
+double norm_gpu_cublas(const double *x, int N)
 {
 	double *nrm2;
-
+	*nrm2 = 0.0;
 	#pragma acc data copyin(x[0:N])
 	{
 		#pragma acc host_data use_device(x)
 		{
 			cublasHandle_t h;
+			cublasCreate(&h);
 			cublasDnrm2(h, N, x, 1, nrm2);
 			cublasDestroy(h);
 		}
 	}
-	
+
 	return *nrm2;
 }
 
