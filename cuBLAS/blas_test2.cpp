@@ -10,6 +10,7 @@
  		In cublasDgemm ,we should set matrix as array.
 */
 
+
 int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 {
 	cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
@@ -22,7 +23,7 @@ int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 			if ( CUBLAS_STATUS_SUCCESS != stat ) {
 				printf("CUBLAS initialization failed\n");
 			}
-
+			
 			if ( CUBLAS_STATUS_SUCCESS == stat )
 			{
 				const double alpha = 1.0;
@@ -37,6 +38,7 @@ int gpu_cublas3( const int n, const double *a, const double *b, double *c )
 	}
 	return CUBLAS_STATUS_SUCCESS == stat;
 }
+
 void gpu_oacc(int n, double *a, double *b, double *c)
 {
 	int i,j,k;
@@ -66,7 +68,6 @@ int main()
 
 	printf("Input size n = ");
 	scanf("%d",&n);
-	printf("\n");
 
 	double *a = (double*)malloc(sizeof(double)*n*n);
 	double *b = (double*)malloc(sizeof(double)*n*n);
@@ -77,11 +78,10 @@ int main()
 	{
 		for (j = 0; j < n; ++j)
 		{
-			a[i*n+j] = 1.0 + i;
-			b[i*n+j] = 1.0 - i;
+			a[i*n+j] = i + j;
+			b[i*n+j] = i - j;
 		}
 	}
-
 	t1 = clock();
 	gpu_oacc( n, a, b, c_gpu_oacc);
 	t2 = clock();
@@ -108,7 +108,7 @@ int main()
       	printf(" Test FAILED\n");
 	else
 	{
-      		printf(" Test tblas6 PASSED\n");
+      	printf(" Test tblas6 PASSED\n");
 		printf(" gpu oacc times = %f \n", gpu_oacc_times);
 		printf(" gpu cublas3 times = %f \n", gpu_cublas3_times);
 		printf(" gpu oacc times/gpu cublas3 times = %f \n", gpu_oacc_times/gpu_cublas3_times);

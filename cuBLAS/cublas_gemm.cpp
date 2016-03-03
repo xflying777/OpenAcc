@@ -4,57 +4,40 @@
 #include <stdlib.h>
 
 /*
- Note : cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n)
- 		means matrix C = B * A
- 		
- 		In cublasDgemm ,we should set matrix as array.
+	C = alpha * A * B + beta * C
 */
 
 
-int gpu_cublas3( const int n, const double *a, const double *b, double *c )
+void gpu_cublas3(const int n, const double *a, const double *b, double *c)
 {
 	cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
-	#pragma acc data pcopyin( a[0:n*n], b[0:n*n] ) pcopyout( c[0:n*n] )
+	#pragma acc data present(a, b, c)
 	{
-		#pragma acc host_data use_device( a, b, c )
+		#pragma acc host_data use_device(a, b, c)
 		{
 			cublasHandle_t handle;
-			stat = cublasCreate(&handle);
-			if ( CUBLAS_STATUS_SUCCESS != stat ) {
-				printf("CUBLAS initialization failed\n");
-			}
-			
-			if ( CUBLAS_STATUS_SUCCESS == stat )
-			{
-				const double alpha = 1.0;
-				const double beta = 0.0;
-				stat = cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n);
-				if (stat != CUBLAS_STATUS_SUCCESS) {
-					printf("cublasDgemm failed\n");
-				}
-			}
+			const double alpha = 1.0;
+			const double beta = 0.0;
+			cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, n,n,n, &alpha, a, n, b, n, &beta, c, n);
 			cublasDestroy(handle);
 		}
 	}
-	return CUBLAS_STATUS_SUCCESS == stat;
 }
 
 void gpu_oacc(int n, double *a, double *b, double *c)
 {
-	int i,j,k;
+	int i, j, k;
 	// Compute mAtrix multipliCAtion.
-	#pragma acc data copyin(a[0:n*n],b[0:n*n]) copy(c[0:n*n])
-	#pragma acc kernels
-	#pragma acc loop independent
+	#pragma acc parallel loop independent presnet(a, b, c)
 	for (i = 0; i < n; ++i) 
 	{
-	#pragma acc loop independent
+		#pragma acc loop independent
 		for (j = 0; j < n; ++j) 
 		{
-	#pragma acc loop seq
+			#pragma acc loop seq
 			for (k = 0; k < n; ++k) 
 			{
-				c[i*n+j] += b[i*n+k] * a[k*n+j];
+				c[i*n+j] += a[i*n+k] * b[k*n+j];
 			}
 		}
 	}
@@ -78,25 +61,35 @@ int main()
 	{
 		for (j = 0; j < n; ++j)
 		{
-			a[i*n+j] = i + j;
-			b[i*n+j] = i - j;
+			a[i*n+j] = i;
+			b[i*n+j] = j;
 		}
 	}
 	t1 = clock();
-	gpu_oacc( n, a, b, c_gpu_oacc);
+	#pragma acc data copyin(a[0:n*n], b[0:n*n]) create(c_gpu_oacc[0:n*n])
+	{
+		gpu_oacc( n, a, b, c_gpu_oacc);
+	}
+	#pragma acc update host(c_gpu_oacc)
 	t2 = clock();
 	gpu_oacc_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
 	t1 = clock();
-	#pragma acc data copyin( a[0:n*n], b[0:n*n] ) copyout( c_gpu_cublas3[0:n*n] )
+	#pragma acc data copyin(a[0:n*n], b[0:n*n]) copyout(c_gpu_cublas3[0:n*n])
 	{
-		gpu_cublas3( n, a, b, c_gpu_cublas3);
+		gpu_cublas3(n, a, b, c_gpu_cublas3);
 	}
 	t2 = clock();
 	gpu_cublas3_times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	
+	printf(" matrix a = \n");
+	for (i=0; i<n; i++)
+	{
+		for (j=0; j<n; j++)	printf(" %f ", a[i*n+j]);
+		printf("\n");
+	}
 
 	int nfailures = 0;
-	printf(" %lf %lf\n", c_gpu_cublas3[0], c_gpu_cublas3[n*n-1]);
 	for (int i = 0; i < n; ++i)
 	{
 		for (int j = 0; j < n; ++j) 
