@@ -56,7 +56,7 @@ int main()
 	cpu_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
 
 	printf("\n norm1 = %f , norm2 = %f , norm3 = %f \n", norm1, norm2, norm3);
-	printf(" gpu1 times = %f, gpu2 time = %f, cpu times = %f \n", gpu1_time, gpu2_time, cpu_time);
+	printf(" gpu1(oacc) times = %f, gpu2(cublas) time = %f, cpu times = %f \n", gpu1_time, gpu2_time, cpu_time);
 
 	return 0;
 }

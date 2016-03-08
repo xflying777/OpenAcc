@@ -206,18 +206,15 @@ void source(double *b, int N)
 
 void norm(double *x, double *norm, int N)
 {
-	int i;
-	
-	#pragma acc data present(x, norm)
+	#pragma acc data present(x)
 	{
-		norm=0.0;
-		#pragma acc update device(norm)
-		#pragma acc parallel loop reduction(+:norm)
-		for(i=0; i<N; i++)
+		#pragma acc host_data use_device(x)
 		{
-			norm += x[i]*x[i];
+			cublasHandle_t h;
+			cublasCreate(&h);
+			cublasDnrm2(h, N, x, 1, norm);
+			cublasDestroy(h);
 		}
-		*norm = sqrt(*norm);
 	}
 }
 
@@ -228,7 +225,7 @@ double norm_cpu(double *x, int N)
 	norm = 0.0;
 	for (i=0; i<N; i++)	norm += x[i]*x[i];
 	norm = sqrt(norm);
-	
+
 	return norm;
 }
 
@@ -278,7 +275,7 @@ void backsolve(double *H, double *s, double *y, int N, int max_iter, int i)
 	// i = iter
 	int j, k;
 	double temp;
-	
+
 	for(j=i; j>=0; j--)
 	{
 		temp = s[j];
@@ -319,7 +316,6 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 // means matrix C = B * A
 void cublas_gemm(int n, double *c, double *b, double *a )
 {
-	cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
 	#pragma acc data present(a, b, c)
 	{
 		#pragma acc host_data use_device(a, b, c)
@@ -328,7 +324,7 @@ void cublas_gemm(int n, double *c, double *b, double *a )
 			cublasCreate(&handle);
 			const double alpha = 1.0;
 			const double beta = 0.0;
-			stat = cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n);
+			cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n);
 			cublasDestroy(handle);
 		}
 	}
