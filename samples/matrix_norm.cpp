@@ -105,7 +105,7 @@ double cublas_gemm_norm(const double *A, const double *B, double *C, int N)
                         const double alpha = 1.0;
                         const double beta = 0.0;
                         cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, A, N, B, N, &beta, C, N);
-			cublasDnrm2(h, N*N, C, 1, norm);
+						cublasDnrm2(h, N*N, C, 1, norm);
                         cublasDestroy(h);
                 }
         }
