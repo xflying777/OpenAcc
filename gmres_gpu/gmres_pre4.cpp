@@ -505,7 +505,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
 		s[0] = *beta;
 
-		for (i = 0; i<max_iter; i++)
+		for (i=0; i<max_iter; i++)
 		{
 			#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2])
 			{
