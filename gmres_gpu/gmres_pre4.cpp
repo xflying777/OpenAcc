@@ -497,27 +497,28 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		tol = resid;
 		max_iter = 0;
   	}
-	
+
 	for (m=0; m<max_restart; m++)
 	{
 
 		for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
 		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
 		s[0] = *beta;
-		
-		for (i = 0; i<max_iter; i++) 
+
+		for (i = 0; i<max_iter; i++)
 		{
-			#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter]) create(q[0:N2], v[0:N2], M_temp[0:N2]) copyout(w[0:N2])
-			{ 
+			#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2])
+			{
 		  		q_subQ_gpu(q, Q, N2, i);
 		  		cublas_gemm(N, v, D, q);
 				fastpoisson(v, M_temp, N);
+
 				#pragma acc parallel loop independent
 		  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
-	  		
-	  			// h(j,i) = qj*w
+
+	  			// h(k,i) = qk*w
 				#pragma acc parallel loop independent
-		  		for (k=0; k<=i; k++) 
+		  		for (k=0; k<=i; k++)
 				{
 					H[max_iter*k+i] = 0.0;
 					#pragma acc loop seq
@@ -527,10 +528,11 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		  			}
 				}
 
-				#pragma acc parallel loop independent
+				printf(" H[max_iter*%d + %d] = %f \n", k-1, i, H[max_iter*(k-1)+i]);
+				#pragma acc parallel loop seq
 				for (k=0; k<=i; k++)
 				{
-					#pragma acc loop seq
+					#pragma acc loop independent
 					for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
 				}
 
@@ -546,20 +548,20 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
 				H[max_iter*k+i] = temp;
 			}
-			
+
 			GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
-	      	
+
 			//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
 			H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
 			H[max_iter*(i+1)+i] = 0.0;
-			
+
 			//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
 			temp = cs[i]*s[i];
 			s[i+1] = -1.0*sn[i]*s[i];
 			s[i] = temp;
 			resid = fabs(s[i+1] / *beta);
-	     	
-			if (resid < tol) 
+
+			if (resid < tol)
 			{
 				backsolve(H, s, y, N, max_iter, i);
 				for(j=0; j<N; j++)
@@ -575,14 +577,14 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 				break;
 			}
 		}//end inside for
-		
-		if (resid < tol)	
+
+		if (resid < tol)
 		{
 			printf(" resid = %e \n", resid);
 			printf(" Converges at %d cycle %d step. \n", m, i+1);
 			break;
 		}
-		
+
 		// Caution : i = i + 1.
 		i = i - 1;
 		backsolve(H, s, y, N, max_iter, i);
@@ -605,10 +607,10 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
 			norm_gpu(r, beta, N2);
 		}
-		
+
 		s[i+1] = *beta;
 		resid = s[i+1] / *normb;
-		if ( resid < tol)	
+		if ( resid < tol)
 		{
 			printf(" resid = %e \n", resid);
 			printf(" Converges at %d cycle %d step. \n", m, i);
