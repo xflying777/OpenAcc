@@ -491,14 +491,20 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 	  		q_subQ(q, Q, N2, i);
 	  		matrix_matrix(D, q, v, N);
 			fastpoisson(v, M_temp, N);
-	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
+	  		for (k=0; k<N2; k++)	w[k] = q[k] + M_temp[k];
 	  		
-	  		for (k=0; k<=i; k++) 
+/*	  		for (k=0; k<=i; k++) 
 			{
 				q_subQ(q, Q, N2, k);
 				H[max_iter*k+i] = inner_product(q, w, N2);
-//				w_shift(w, q, H[max_iter*k+i], N2);
 	  		}
+*/
+			for (k=0; k<=i; k++)
+			{
+				H[max_iter*k+i] = 0.0;
+				for (j=0; j<N2; j++)	H[max_iter*k+i] += Q[N2*k+j]*w[j];
+			}
+
 			for (k=0; k<=i; k++)
 			{
 				for (j=0; j<N2; j++)	w[j] = w[j] - H[max_iter*k+i]*Q[N2*k+j];
