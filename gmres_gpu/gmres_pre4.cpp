@@ -520,19 +520,21 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		  		for (k=0; k<=i; k++) 
 				{
 					H[max_iter*k+i] = 0.0;
-					#pragma acc loop reduction(+:H[max_iter*k+i])
+					#pragma acc loop seq
 					for (j=0; j<N2; j++)
 					{
 						H[max_iter*k+i] += Q[N2*k+j]*w[j];
 		  			}
 				}
 
+				#pragma acc parallel loop independent
 				for (k=0; k<=i; k++)
 				{
+					#pragma acc loop seq
 					for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
 				}
 
-				H[max_iter*(i+1)+i] = norm_cpu(w, nrm_temp, N2);
+				norm_gpu(w, nrm_temp, N2);
 				H[max_iter*(i+1)+i] = *nrm_temp;
 				subQ_v_gpu(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 			} //end pragma acc
@@ -601,7 +603,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			fastpoisson(v, M_temp, N);
 			#pragma acc parallel loop independent
 			for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
-			norm(r, beta, N2);
+			norm_gpu(r, beta, N2);
 		}
 		
 		s[i+1] = *beta;
