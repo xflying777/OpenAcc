@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-#include "cblas.h"
+#include <cblas.h>
 
 //******************************************************************************
 void initial(double *A, double *Q, double *R, int N);
@@ -174,7 +174,7 @@ void Gram_Schmidt(double *A, double *Q, double *R, int N)
 			//r(i,j) = qi*aj
 			for (k=0; k<N; k++)	q[k] = Q[N*k+i];
 			R[N*i+j] = dot_cpu(q, a, N);
-			
+
 			//vj = vj - r(i,j)*qi
 			for (k=0; k<N; k++)	v[k] = v[k] - R[N*i+j]*q[k];
 		}

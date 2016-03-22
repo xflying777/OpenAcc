@@ -20,7 +20,7 @@ int main()
 
 	double t1, t2;
 	double *A, *Q, *R;
-	
+
 	A = (double *) malloc(N*N*sizeof(double));
 	Q = (double *) malloc(N*N*sizeof(double));
 	R = (double *) malloc(N*N*sizeof(double));
@@ -28,18 +28,9 @@ int main()
 	initial(A, Q, R, N);
 
 	t1 = clock();
-	#pragma acc enter data copyin(A[0:N*N]) copyout(Q[0:N*N], R[0:N*N])
 	Gram_Schmidt(A, Q, R, N);
-	#pragma acc update host(Q[0:N*N], R[0:N*N])
 	t2 = clock();
 
-/*	printf("\n A = \n");
-	print_matrix(A, N);
-	printf("\n Q = \n");
-	print_matrix(Q, N);
-	printf("\n R = \n");
-	print_matrix(R, N);
-*/
 	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 	printf(" error = %e \n", error(A, Q, R, N));
 
@@ -107,7 +98,7 @@ double norm_cpu(double *A, int N)
         int i;
         double norm;
 
-	#pragma acc data presnet(A)
+	#pragma acc data present(A)
 	{
         	norm = 0.0;
 		#pragma acc parallel loop reduction(+:norm)
@@ -163,7 +154,7 @@ void Gram_Schmidt(double *A, double *Q, double *R, int N)
 				#pragma acc parallel loop independent
 				for (k=0; k<N; k++)	q[k] = Q[N*k+i];
 				R[N*i+j] = dot_cpu(q, a, N);
-			
+
 				//vj = vj - r(i,j)*qi
 				#pragma acc parallel loop independent
 				for (k=0; k<N; k++)	v[k] = v[k] - R[N*i+j]*q[k];
