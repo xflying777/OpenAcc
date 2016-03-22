@@ -480,7 +480,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 	sn = (double *) malloc((max_iter+1)*sizeof(double));
 	s = (double *) malloc((max_iter+1)*sizeof(double));
 	y = (double *) malloc((max_iter+1)*sizeof(double));
-	
+
 	N2 = N*N;
 
 	#pragma acc data copyin(b[0:N2]) copyout(M_b[0:N2], r[0:N2], normb[0], beta[0])
@@ -491,7 +491,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		for (k=0; k<N2; k++)	r[k] = M_b[k];
 		norm_gpu(r, beta, N2);
 	}
-	
+
 	if ((resid = *beta / *normb) <= tol) 
 	{
 		tol = resid;
@@ -513,11 +513,11 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		  		cublas_gemm(N, v, D, q);
 				fastpoisson(v, M_temp, N);
 
-				#pragma acc parallel loop independent
+				#pragma acc parallel loop independent present(w, q, M_temp)
 		  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
 
 	  			// h(k,i) = qk*w
-				#pragma acc parallel loop independent
+				#pragma acc parallel loop independent present(H, Q, w)
 		  		for (k=0; k<=i; k++)
 				{
 					H[max_iter*k+i] = 0.0;
@@ -528,8 +528,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		  			}
 				}
 
-				printf(" H[max_iter*%d + %d] = %f \n", k-1, i, H[max_iter*(k-1)+i]);
-				#pragma acc parallel loop seq
+				#pragma acc parallel loop seq present(w, H, Q)
 				for (k=0; k<=i; k++)
 				{
 					#pragma acc loop independent

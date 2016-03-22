@@ -1,3 +1,3 @@
 
- pgc++ -acc -ta=tesla -Mcudalib=cufft,cublas -Minfo filename.cpp
+ pgc++ -acc -ta=tesla:managed -Mcudalib=cufft,cublas -Minfo filename.cpp
 
