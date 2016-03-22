@@ -190,10 +190,10 @@ double dot_cpu(double *A, double *B, int N)
 {
 	int i;
 	double result;
-	
+
 	result = 0.0;
 	for (i=0; i<N; i++)	result += A[i]*B[i];
-	
+
 	return result;
 }
 
@@ -201,7 +201,7 @@ double dot_cpu(double *A, double *B, int N)
 void axpy_cpu(double alpha, double *A, double *B, int N)
 {
 	int i;
-	
+
 	for (i=0; i<N; i++)	B[i] = alpha*A[i] + B[i];
 }
 

@@ -229,19 +229,6 @@ double inner_product(double *x, double *y, int N)
 
 void matrix_matrix(double *A, double *x, double *b, int N)
 {
-/*	int i, j, k;
-	for (i=0; i<N; i++)
-	{
-		for (j=0; j<N; j++)
-		{
-			b[N*i+j] = 0.0;
-			for (k=0; k<N; k++)
-			{
-				b[N*i+j] += A[N*i+k]*x[N*k+j];
-			}
-		}
-	}
-*/
 	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A, N, x, N, 0.0, b, N);
 
 }
