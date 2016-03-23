@@ -256,7 +256,7 @@ void backsolve(double *H, double *s, double *y, int N, int max_iter, int i)
 	// i = iter
 	int j, k;
 	double temp;
-	
+
 	for(j=i; j>=0; j--)
 	{
 		temp = s[j];

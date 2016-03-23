@@ -50,14 +50,12 @@ int main()
 	b = (double *) malloc(N*N*sizeof(double));
 	u = (double *) malloc(N*N*sizeof(double));
 	
-	initial(A, b, x, N);
+	initial(A, b, x, N);	
 	tol = 1.0e-4;
 	t1 = clock();
 	gmres(A, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
 	exact_solution(u, N);
-	printf(" u[%d][%d] = %f \n", N/2, N/2, u[N*N/2+N/2]);
-	printf(" x[%d][%d] = %f \n", N/2, N/2, x[N*N/2+N/2]);
 	
 	printf(" error = %e \n", error(x, u, N*N));
 	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
@@ -151,51 +149,61 @@ void exact_solution(double *u, int N)
 	for (i=0; i<N; i++)
 	{
 		y = (i+1)*h;
-		for (j=0; j<N; j++)	
+		for (j=0; j<N; j++)
 		{
 			x = (j+1)*h;
 			u[N*i+j] = x*y*sin(x)*sin(y);
 		}
-	}	
+	}
 }
 
-double norm(double *x, int N)
-{
-	int i;
-	double norm;
-	norm=0.0;
-	for(i=0; i<N; i++)
-	{
-		norm += x[i]*x[i];
-	}
-	norm = sqrt(norm);
-	return norm;
-}
+//**************************************************************************************
 
-double inner_product(double *x, double *y, int N)
+void norm(double *x, double *nrm, int N)
 {
-	int i;
-	double temp;
-	temp = 0.0;
-	for(i=0; i<N; i++)
+	#pragma acc data present(x)
 	{
-		temp += x[i]*y[i];
+		#pragma acc host_data use_device(x)
+		{
+			cublasHandle_t h;
+			cublasCreate(&h);
+			cublasDnrm2(h, N, x, 1, nrm);
+			cublasDestroy(h);
+		}
 	}
-	return temp;
 }
 
 void matrix_matrix(double *A, double *x, double *b, int N)
 {
-	int i, j, k;
-	for (i=0; i<N; i++)
+	#pragma acc data present(A, x, b)
 	{
-		for (j=0; j<N; j++)
+		#pragma acc host_data use_device(A, x, b)
 		{
-			b[N*i+j] = 0.0;
-			for (k=0; k<N; k++)
-			{
-				b[N*i+j] += A[N*i+k]*x[N*k+j];
-			}
+			cublasHandle_t h;
+			cublasCreate(&h);
+			const double alpha = 1.0;
+			const double beta = 0.0;
+			cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, A, N, x, N, &beta, b, N);
+			cublasDestroy(h);
+		}
+	}
+}
+
+// TU + UT
+void matrix_TUUT(double *T, double *U, double *tu, double *ut, int N)
+{
+	#pragma acc data present(T, U, tu, ut)
+	{
+		#pragma acc host_data use_device(T, U, tu, ut)
+		{
+			cublasHandle_t h;
+			cublasCreate(&h);
+			const double alpha = 1.0;
+			const double beta = 0.0;
+			cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, T, N, U, N, &beta, tu, N);
+			cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, U, N, T, N, &beta, ut, N);
+			cublasDaxpy(h, N*N, &alpha, tu, 1, ut, 1);
+			cublasDestroy(h);
 		}
 	}
 }
@@ -203,6 +211,7 @@ void matrix_matrix(double *A, double *x, double *b, int N)
 void q_subQ(double *q, double *Q, int N, int iter)
 {
 	int i;
+	#pragma acc parallel loop independent present(q, Q)
 	for (i=0; i<N; i++)	q[i] = Q[N*iter+i];
 }
 
@@ -262,116 +271,171 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 	}
 }
 
+//**************************************************************************************
+
 void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
-	int i, j, k, l, m, N2;
-	double resid, normb, beta, temp, *r, *q, *v, *z, *w, *cs, *sn, *s, *y, *Q, *H;
+	int i, j, k, m, N2;
+	double resid, *normb, *beta, *nrm, temp, *r, *q, *v, *w, *cs, *sn, *s, *y, *Q, *H;
 	
-	Q = (double *) malloc(N*N*(max_iter+1)*sizeof(double));
+	N2 = N*N;
+	Q = (double *) malloc(N2*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
-	r = (double *) malloc(N*N*sizeof(double));
-	q = (double *) malloc(N*N*sizeof(double));
-	v = (double *) malloc(N*N*sizeof(double));
-	z = (double *) malloc(N*N*sizeof(double));
-	w = (double *) malloc(N*N*sizeof(double));
+	r = (double *) malloc(N2*sizeof(double));
+	q = (double *) malloc(N2*sizeof(double));
+	v = (double *) malloc(N2*sizeof(double));
+	w = (double *) malloc(N2*sizeof(double));
 	cs = (double *) malloc((max_iter+1)*sizeof(double));
 	sn = (double *) malloc((max_iter+1)*sizeof(double));
 	s = (double *) malloc((max_iter+1)*sizeof(double));
 	y = (double *) malloc((max_iter+1)*sizeof(double));
 	
-	N2 = N*N;
-	normb = norm(b, N2);
-	
-	matrix_matrix(A, x, v, N);
-	matrix_matrix(x, A, z, N);
-	for (i=0; i<N2; i++)	r[i] = b[i] - (v[i] + z[i]);
-	beta = norm(r, N2);
+	normb = (double *) malloc(1*sizeof(double));
+	beta = (double *) malloc(1*sizeof(double));
+	nrm = (double *) malloc(1*sizeof(double));
+
+	#pragma acc data copyin(b[0:N2]) copyout(r[0:N2])
+	{
+		#pragma acc host_data use_device(b, r)
+		{
+			cublasHandle_t h;
+			cublasCreate(&h);
+			cublasDnrm2(h, N2, b, 1, normb);
+			cublasDcopy(h, N2, b, 1, r, 1);
+			cublasDnrm2(h, N2, r, 1, beta);
+			cublasDestroy(h);
+		}
+	} //end pragma acc
 	
 	for (m=0; m<max_restart; m++)
 	{
-
-		for (i=0; i<N2; i++)	Q[i] = r[i]/beta;
-		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
-		s[0] = beta;
+		#pragma acc data copyin(r[0:N2]) copyout(Q[0:N2*(max_iter+1)])
+		{
+			#pragma acc parallel loop independent
+			for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
+			#pragma acc parallel loop independent
+			for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
+			s[0] = beta;
+		}
 		
 		for (i = 0; i<max_iter; i++) 
 		{
-	  		q_subQ(q, Q, N2, i);	
-	  		matrix_matrix(A, q, v, N);
-	  		matrix_matrix(q, A, z, N);
-	  		for (j=0; j<N2; j++)	w[j] = v[j] + z[j];
-	  		
-	  		for (k=0; k<=i; k++) 
+			#pragma acc data copyin(A[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter]) create(q[0:N2], w[0:N2], v[0:N2])
 			{
-				q_subQ(q, Q, N2, k);
-				H[max_iter*k+i] = inner_product(q, w, N2);
-				w_shift(w, q, H[max_iter*k+i], N2);
-	  		}
-	  		
-			H[max_iter*(i+1)+i] = norm(w, N2);
-			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
+				// w = Aq + qA
+				#pragma acc parallel loop independent
+				for (k=0; k<N2; k++)	q[k] = Q[N2*i+k];
+				matrix_TUUT(A, q, v, w, N);
+
+				// h(j,i) = qj*v
+				#pragma acc parallel loop independent
+				for (j=0; j<=i; j++)
+				{
+					H[max_iter*j+i] = 0.0;
+					#pragma acc loop seq
+					for (k=0; k<N*N; k++)	H[max_iter*j+i] += Q[N2*j+k]*v[k];
+				}
+
+				// w = w - \sum h(j,i)*qj
+				#pragma acc parallel loop seq
+				for (j=0; j<=i; j++)
+				{
+					#pragma acc loop independent
+					for (k=0; k<N2; k++)	w[k] -= H[max_iter*j+i]*Q[N*N*j+k];
+				}
+
+				// h(i+1,i) = ||w||
+				// qi+1 = w/h(i+1,i)
+				norm(w, nrm, N2);
+				temp = *nrm;
+				H[max_iter*(i+1)+i] = temp;
+				#pragma acc parallel loop independent
+				for (k=0; k<N2; k++)	Q[N2*(i+1)+k] = w[k]/temp;	
+			} //end pragma acc
 			
-	    	for (k = 0; k < i; k++)
-	      	{
-	      		//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
-	      		temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
+	    		for (k = 0; k < i; k++)
+	      		{
+	      			//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+	      			temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
 				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
 				H[max_iter*k+i] = temp;
 			}
 			
-	      	GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
+	      		GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
 	      	
-	      	//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+	      		//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
 			H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
 			H[max_iter*(i+1)+i] = 0.0;
 			
-	      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-	      	temp = cs[i]*s[i];
-	      	s[i+1] = -1.0*sn[i]*s[i];
-	      	s[i] = temp;
-	      	resid = fabs(s[i+1]/beta);
-	     	
-	     	if (resid < tol) 
+		      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+		      	temp = cs[i]*s[i];
+		      	s[i+1] = -1.0*sn[i]*s[i];
+		      	s[i] = temp;
+		      	resid = fabs(s[i+1]/beta);
+		     	
+		     	if (resid < tol) 
 			{
+				printf(" resid = %e \n", resid);
+				printf(" Converges at %d step ", i+1);
 				backsolve(H, s, y, N, max_iter, i);
-				for(j=0; j<N; j++)
+				#pragma acc data copyin(Q[0:N2*(max_iter+1)], y[0:max_iter+1]) copy(x[0:N2])
 				{
-					for (l=0; l<N; l++)
+					#pragma acc parallel loop seq
+					for (k=0; k<=i; k++)
 					{
-						for(k=0; k<=i; k++)
+						#pragma acc loop independent
+						for(j=0; j<N2; j++)
 						{
-							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+							x[j] += Q[N2*k+j]*y[k];
 						}
 					}
 				}
 				break;
-	      	}
+	      		}
 		}//end inside for
 		
 		if (resid < tol)	
 		{
-			printf(" resid = %e \n", resid);
-			printf(" Converges at %d cycle %d step. \n", m, i+1);
+			printf(" %d cycle \n", m);
 			break;
 		}
 		
 		// Caution : i = i + 1.
 		i = i - 1;
 		backsolve(H, s, y, N, max_iter, i);
-		for(j=0; j<N; j++)
+		#pragma acc data copyin(A[0:N2], Q[0:N2*(max_iter+1)], b[0:N2], y[0:max_iter+1]) copy(x[0:N2], r[0:N2]) copy(x[0:N2]) create(v[0:N2], w[0:N2])
 		{
-			for (l=0; l<N; l++)
+			#pragma acc parallel loop seq
+			for (k=0; k<=i; k++)
 			{
-				for(k=0; k<=i; k++)
+				#pragma acc loop independent
+				for(j=0; j<N2; j++)
 				{
-					x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+					x[j] += Q[N2*k+j]*y[k];
 				}
 			}
-		}
-		matrix_matrix(A, x, v, N);
-		matrix_matrix(x, A, z, N);
-		for (j=0; j<N2; j++)	r[j] = b[j] - (v[j] + z[j]);
-		beta = norm(r, N2);
+
+			// v = Ax + xA
+			// r = b - v
+			// beta = ||r||
+			maxtrix_TUUT(A, x, w, v);
+			#pragma acc host_data use_device(A, x, w, v, b, r)
+			{
+				cublasHandle_t h;
+				cublasCreate(&h);
+				const double alpha = 1.0;
+				const double beta = 0.0;
+				cinst double gama = -1.0;
+				cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, A, N, x, N, &beta, w, N);
+				cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, x, N, A, N, &beta, v, N);
+				cublasDaxpy(h, N2, &alpha, w, 1, v, 1);
+				cublasDcopy(h, N2, b, 1, r, 1);
+				cublasDaxpy(h, N2, &gama, v, 1, r, 1);
+				cublasDnrm2(h, N2, r, 1, beta);
+				cublasDestroy(h);
+			}
+		} //end pragma acc
+
 		s[i+1] = beta;
 		resid = s[i+1]/normb;
 		if ( resid < tol)	
