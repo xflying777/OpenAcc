@@ -61,10 +61,11 @@ void norm(double *x, double *nrm, int N)
 			cublasDestroy(h);
 		}
 	}
+//	printf(" cublasDnrm2 success \n");
 }
 
 // Ax = b
-void matrix_matrix(const double *A, const double *x, double *b, int N)
+void matrix_matrix(double *A, double *x, double *b, int N)
 {
 	#pragma acc data present(A, x, b)
 	{
@@ -78,6 +79,7 @@ void matrix_matrix(const double *A, const double *x, double *b, int N)
 			cublasDestroy(h);
 		}
 	}
+//	printf(" cublasDgemm success \n");
 }
 
 //***********************************************************************************
@@ -86,25 +88,28 @@ void Arnoldi_Iteration(double *A, double *Q, double *H, double *b, int N, int it
 {
 	int i, j, k;
 	double *v, *q;
-	double *nrm, *dot, temp, t1, t2;
+	double *nrm, temp, t1, t2;
 
 	v = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
 
 	nrm = (double *) malloc(1*sizeof(double));
-	dot = (double *) malloc(1*sizeof(double));
 
+	t1 = clock();
 	#pragma acc data copyin(b[0:N*N]) copyout(Q[0:N*N*(iter+1)])
 	{
 		norm(b, nrm, N*N);
+		temp = *nrm;
 		#pragma acc parallel loop independent
-		for (k=0; k<N*N; k++)	Q[k] = b[k] / *nrm;
+		for (k=0; k<N*N; k++)	Q[k] = b[k] / temp;
 	}
+	t2 = clock();
+	printf(" First step times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 
 	t1 = clock();
 	for (i=0; i<iter; i++)
 	{
-		#pragma acc data copy(Q[0:N*N*(iter+1)], H[0:(iter+1)*iter]) create(v[0:N*N], q[0:N*N])
+		#pragma acc data copyin(A[0:N*N]) copy(Q[0:N*N*(iter+1)], H[0:(iter+1)*iter]) create(v[0:N*N], q[0:N*N])
 		{
 			// v= A*qi
 			#pragma acc parallel loop independent
@@ -132,9 +137,10 @@ void Arnoldi_Iteration(double *A, double *Q, double *H, double *b, int N, int it
 			// h(i+1,i) = ||v||
 			norm(v, nrm, N*N);
 			H[iter*(i+1)+i] = *nrm;
+			temp = *nrm;
 			// qi+1 = v/h(i+1,i)
 			#pragma acc parallel loop independent
-			for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / *nrm;
+			for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / temp;
 		} //end pragma acc
 	}
 	t2 = clock();
