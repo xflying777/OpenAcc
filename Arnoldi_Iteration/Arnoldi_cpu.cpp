@@ -64,17 +64,17 @@ void Arnoldi_Iteration(double *A, double *Q, double *H, double *b, int N, int it
 {
 	int i, j, k;
 	double *v, *q;
-	double *nrm, *dot;
+	double *nrm, t1, t2;
 
 	v = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
 
 	nrm = (double *) malloc(1*sizeof(double));
-	dot = (double *) malloc(1*sizeof(double));
 
 	norm(b, nrm, N*N);
 	for (k=0; k<N*N; k++)	Q[k] = b[k] / *nrm;
 
+	t1 = clock();
 	for (i=0; i<iter; i++)
 	{
 		// v= A*qi
@@ -100,5 +100,7 @@ void Arnoldi_Iteration(double *A, double *Q, double *H, double *b, int N, int it
 		// qi+1 = v/h(i+1,i)
 		for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / *nrm;
 	}
+	t2 = clock();
+	printf(" Arnoldi times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 }
 

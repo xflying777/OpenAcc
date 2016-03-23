@@ -43,20 +43,20 @@ int main()
 	// data3 : Prepare for complex value to data2 and do the cufft. 
 	data2 = (float *) malloc(Lx*Ny*sizeof(float)); 
 	data3 = (float *) malloc(2*Lx*Ny*sizeof(float)); 
-	
+
 	#pragma acc enter data create(b[0:Nx*Ny], x[0:Nx*Ny], data2[0:Lx*Ny], data3[0:2*Lx*Ny]) 
 	// Prepare for two dimensional unknowns U 
 	// where u is the one dimensional vector and 
 	// U[i][j] = u[j+i*(N-1)] 
 	u = (float *) malloc(Nx*Ny*sizeof(float)); 
-	
+
 	Exact_Solution(u, Nx); 
-	Exact_Source(b, Nx); 
-	t1 = clock(); 
-	fast_poisson_solver_gpu(b, x, data2, data3, Nx, Ny, Lx); 
+	Exact_Source(b, Nx);
+	t1 = clock();
+	fast_poisson_solver_gpu(b, x, data2, data3, Nx, Ny, Lx);
 	#pragma acc update host(x[0:Nx*Ny])
-	t2 = clock(); 
-	
+	t2 = clock();
+
 	printf(" Fast Poisson Solver: %f secs\n", 1.0*(t2-t1)/CLOCKS_PER_SEC); 
 	printf(" For N = %d error = %e \n", Nx, Error(x, u, Nx)); 
 	
@@ -70,10 +70,10 @@ int main()
 */   return 0; 
 } 
 
-void print_matrix(float *x, int N) 
-{ 
-	int i, j; 
-   	for(i=0;i<N;i++) 
+void print_matrix(float *x, int N)
+{
+	int i, j;
+   	for(i=0;i<N;i++)
    	{
       		for (j=0;j<N;j++) printf(" %f ", x[N*i+j]); 
       		printf("\n"); 
@@ -216,40 +216,40 @@ void transpose(float *data_in, float *data_out, int Nx, int Ny)
 } 
 
 void fast_poisson_solver_gpu(float *b, float *x, float *data2, float *data3, int Nx, int Ny, int Lx) 
-{ 
-	int i, j; 
-	float h, *lamda, *temp; 
-	
-	temp = (float *) malloc(Nx*Ny*sizeof(float)); 
-	lamda = (float *) malloc(Nx*sizeof(float)); 
-	h = 1.0/(Nx+1); 
-	
+{
+	int i, j;
+	float h, *lamda, *temp;
+
+	temp = (float *) malloc(Nx*Ny*sizeof(float));
+	lamda = (float *) malloc(Nx*sizeof(float));
+	h = 1.0/(Nx+1);
+
 	#pragma acc data create(lamda[0:Nx],temp[0:Nx*Ny]), present(b[0:Nx*Ny],x[0:Nx*Ny]) 
-	{ 
-	
-		#pragma acc parallel loop independent 
-		for(i=0;i<Nx;i++) 
-		{ 
-			lamda[i] = 2 - 2*cos((i+1)*M_PI*h); 
-		} 
-		
-		fdst_gpu(b, data2, data3, Nx, Ny, Lx); 
-		transpose(b, temp, Nx, Ny); 
-		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
-		transpose(temp, b, Ny, Nx); 
-		
-		#pragma acc parallel loop independent 
-		for(i=0;i<Ny;i++) 
-		{ 
-			#pragma acc loop independent 
-			for(j=0;j<Nx;j++) 
-			{ 
-				x[Nx*i+j] = -b[Nx*i+j]/(lamda[i] + lamda[j]); 
-			} 
-		} 
-		fdst_gpu(x, data2, data3, Nx, Ny, Lx); 
-		transpose(x, temp, Nx, Ny); 
-		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
-		transpose(temp, x, Ny, Nx); 
-	} // end data region 
+	{
+
+		#pragma acc parallel loop independent
+		for(i=0;i<Nx;i++)
+		{
+			lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
+		}
+
+		fdst_gpu(b, data2, data3, Nx, Ny, Lx);
+		transpose(b, temp, Nx, Ny);
+		fdst_gpu(temp, data2, data3, Nx, Ny, Lx);
+		transpose(temp, b, Ny, Nx);
+
+		#pragma acc parallel loop independent
+		for(i=0;i<Ny;i++)
+		{
+			#pragma acc loop independent
+			for(j=0;j<Nx;j++)
+			{
+				x[Nx*i+j] = -b[Nx*i+j]/(lamda[i] + lamda[j]);
+			}
+		}
+		fdst_gpu(x, data2, data3, Nx, Ny, Lx);
+		transpose(x, temp, Nx, Ny);
+		fdst_gpu(temp, data2, data3, Nx, Ny, Lx);
+		transpose(temp, x, Ny, Nx);
+	} // end data region
 }
