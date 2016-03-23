@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include "cublas_v2.h"
 
 void print_vector(double *x, int N);
 void matrix_vector(double *A, double *x, double *b, int N);
@@ -129,7 +130,7 @@ void initial(double *A, double *b, double *x0, int N)
 	}
 	temp = -2.0/h2;
 	for(i=0; i<N; i++)
-	{			
+	{
 		A[N*i+i] = temp;
 	}
 	temp = 1.0/h2;
@@ -171,6 +172,7 @@ void norm(double *x, double *nrm, int N)
 			cublasDestroy(h);
 		}
 	}
+//	printf(" norm success \n");
 }
 
 void matrix_matrix(double *A, double *x, double *b, int N)
@@ -206,6 +208,7 @@ void matrix_TUUT(double *T, double *U, double *tu, double *ut, int N)
 			cublasDestroy(h);
 		}
 	}
+//	printf(" matrix_TUUT sucess \n");
 }
 
 void q_subQ(double *q, double *Q, int N, int iter)
@@ -236,7 +239,7 @@ void backsolve(double *H, double *s, double *y, int N, int max_iter, int i)
 	// i = iter
 	int j, k;
 	double temp;
-	
+
 	for(j=i; j>=0; j--)
 	{
 		temp = s[j];
@@ -252,11 +255,11 @@ void backsolve(double *H, double *s, double *y, int N, int max_iter, int i)
 void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 {
 	double temp;
-	if (dy == 0.0) 
+	if (dy == 0.0)
 	{
 		cs[i] = 1.0;
 		sn[i] = 0.0;
-	} 
+	}
 	else if (fabs(dy) > fabs(dx)) 
 	{
 		temp = dx / dy;
@@ -277,7 +280,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 {
 	int i, j, k, m, N2;
 	double resid, *normb, *beta, *nrm, temp, *r, *q, *v, *w, *cs, *sn, *s, *y, *Q, *H;
-	
+
 	N2 = N*N;
 	Q = (double *) malloc(N2*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
@@ -289,7 +292,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 	sn = (double *) malloc((max_iter+1)*sizeof(double));
 	s = (double *) malloc((max_iter+1)*sizeof(double));
 	y = (double *) malloc((max_iter+1)*sizeof(double));
-	
+
 	normb = (double *) malloc(1*sizeof(double));
 	beta = (double *) malloc(1*sizeof(double));
 	nrm = (double *) malloc(1*sizeof(double));
@@ -302,23 +305,25 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			cublasCreate(&h);
 			cublasDnrm2(h, N2, b, 1, normb);
 			cublasDcopy(h, N2, b, 1, r, 1);
-			cublasDnrm2(h, N2, r, 1, beta);
+//			cublasDnrm2(h, N2, r, 1, beta);
 			cublasDestroy(h);
 		}
 	} //end pragma acc
-	
+	*beta = *normb;
+
 	for (m=0; m<max_restart; m++)
 	{
+		temp = *beta;
 		#pragma acc data copyin(r[0:N2]) copyout(Q[0:N2*(max_iter+1)])
 		{
 			#pragma acc parallel loop independent
-			for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
+			for (i=0; i<N2; i++)	Q[i] = r[i] / temp;
 			#pragma acc parallel loop independent
 			for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
-			s[0] = beta;
+			s[0] = temp;
 		}
-		
-		for (i = 0; i<max_iter; i++) 
+
+		for (i = 0; i<max_iter; i++)
 		{
 			#pragma acc data copyin(A[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter]) create(q[0:N2], w[0:N2], v[0:N2])
 			{
@@ -352,7 +357,7 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				#pragma acc parallel loop independent
 				for (k=0; k<N2; k++)	Q[N2*(i+1)+k] = w[k]/temp;	
 			} //end pragma acc
-			
+
 	    		for (k = 0; k < i; k++)
 	      		{
 	      			//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
@@ -360,20 +365,20 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
 				H[max_iter*k+i] = temp;
 			}
-			
+
 	      		GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
-	      	
+
 	      		//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
 			H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
 			H[max_iter*(i+1)+i] = 0.0;
-			
+
 		      	//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
 		      	temp = cs[i]*s[i];
 		      	s[i+1] = -1.0*sn[i]*s[i];
 		      	s[i] = temp;
-		      	resid = fabs(s[i+1]/beta);
-		     	
-		     	if (resid < tol) 
+		      	resid = fabs(s[i+1] / *beta);
+
+		     	if (resid < tol)
 			{
 				printf(" resid = %e \n", resid);
 				printf(" Converges at %d step ", i+1);
@@ -393,17 +398,17 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 				break;
 	      		}
 		}//end inside for
-		
-		if (resid < tol)	
+
+		if (resid < tol)
 		{
 			printf(" %d cycle \n", m);
 			break;
 		}
-		
+
 		// Caution : i = i + 1.
 		i = i - 1;
 		backsolve(H, s, y, N, max_iter, i);
-		#pragma acc data copyin(A[0:N2], Q[0:N2*(max_iter+1)], b[0:N2], y[0:max_iter+1]) copy(x[0:N2], r[0:N2]) copy(x[0:N2]) create(v[0:N2], w[0:N2])
+		#pragma acc data copyin(A[0:N2], Q[0:N2*(max_iter+1)], b[0:N2], y[0:max_iter+1]) copyout(r[0:N2]) copy(x[0:N2]) create(v[0:N2], w[0:N2])
 		{
 			#pragma acc parallel loop seq
 			for (k=0; k<=i; k++)
@@ -418,27 +423,27 @@ void gmres(double *A, double *x, double *b, int N, int max_restart, int max_iter
 			// v = Ax + xA
 			// r = b - v
 			// beta = ||r||
-			maxtrix_TUUT(A, x, w, v);
 			#pragma acc host_data use_device(A, x, w, v, b, r)
 			{
 				cublasHandle_t h;
 				cublasCreate(&h);
 				const double alpha = 1.0;
 				const double beta = 0.0;
-				cinst double gama = -1.0;
+				const double gama = -1.0;
 				cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, A, N, x, N, &beta, w, N);
 				cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, x, N, A, N, &beta, v, N);
 				cublasDaxpy(h, N2, &alpha, w, 1, v, 1);
 				cublasDcopy(h, N2, b, 1, r, 1);
 				cublasDaxpy(h, N2, &gama, v, 1, r, 1);
-				cublasDnrm2(h, N2, r, 1, beta);
+//				cublasDnrm2(h, N2, r, 1, beta);
 				cublasDestroy(h);
 			}
+			norm(r, beta, N2);
 		} //end pragma acc
 
-		s[i+1] = beta;
-		resid = s[i+1]/normb;
-		if ( resid < tol)	
+		s[i+1] = *beta;
+		resid = s[i+1] / *normb;
+		if ( resid < tol)
 		{
 			printf(" resid = %e \n", resid);
 			printf(" Converges at %d cycle %d step. \n", m, i);
