@@ -71,8 +71,11 @@ void Arnoldi_Iteration(double *A, double *Q, double *H, double *b, int N, int it
 
 	nrm = (double *) malloc(1*sizeof(double));
 
+	t1 = clock();
 	norm(b, nrm, N*N);
 	for (k=0; k<N*N; k++)	Q[k] = b[k] / *nrm;
+	t2 = clock();
+	printf(" First step times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 
 	t1 = clock();
 	for (i=0; i<iter; i++)
