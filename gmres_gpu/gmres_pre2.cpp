@@ -297,7 +297,6 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 // means matrix C = B * A
 void cublas_gemm(int n, double *c, double *b, double *a )
 {
-	cublasStatus_t stat = CUBLAS_STATUS_SUCCESS;
 	#pragma acc data copyin(a[0:n*n], b[0:n*n]) copyout(c[0:n*n])
 	{
 		#pragma acc host_data use_device(a, b, c)
@@ -482,7 +481,6 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		for (i = 0; i<max_iter; i++) 
 		{
 	  		q_subQ(q, Q, N2, i);
-	  		//matrix_matrix(D, q, v, N);
 	  		cublas_gemm(N, v, D, q);
 			fastpoisson(v, M_temp, N);
 	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
