@@ -3,7 +3,7 @@
 //***************************************************
 
 #include <stdio.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <time.h>
 
@@ -77,14 +77,15 @@ int main()
 	scanf("%d", &N);
 	printf(" N = %d \n", N);
 
-	double *A, *x, *b_cpu, *b_gpu, *b_check;
+	double *A, *x, *b_cpu, *b_gpu;
+//	double *b_check;
 	double t1, t2, cpu_time, gpu_time;
 
 	A = (double *) malloc(N*N*sizeof(double));
 	x = (double *) malloc(N*N*sizeof(double));
 	b_cpu = (double *) malloc(N*N*sizeof(double));
 	b_gpu = (double *) malloc(N*N*sizeof(double));
-	b_check = (double *) malloc(N*N*sizeof(double));
+//	b_check = (double *) malloc(N*N*sizeof(double));
 
 	initial(A, x, N);
 
@@ -94,14 +95,15 @@ int main()
 	cpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
 	t1 = clock();
+	#pragma acc data copyin(A[0:N*N], x[0:N*N]) copyout(b_gpu[0:N*N])
 	gpu_dgemm(A, x, b_gpu, N);
 	t2 = clock();
 	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
-	Dgemm(A, x, b_check, N);
+//	Dgemm(A, x, b_check, N);
 
-	printf(" cpu error = %f \n", error(b_cpu, b_check, N*N));
-	printf(" cpu error = %f \n", error(b_gpu, b_check, N*N));
+//	printf(" cpu error = %f \n", error(b_cpu, b_check, N*N));
+//	printf(" cpu error = %f \n", error(b_gpu, b_check, N*N));
 
 	printf(" cpu times = %f \n", cpu_time);
 	printf(" gpu times = %f \n", gpu_time);
