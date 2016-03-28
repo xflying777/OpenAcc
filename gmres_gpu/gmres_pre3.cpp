@@ -1,4 +1,9 @@
 //*****************************************************************
+// Parallel part:
+//
+//*****************************************************************
+
+//*****************************************************************
 // Iterative template routine -- GMRES
 //
 // GMRES solves the unsymmetric linear system Ax = b using the 
@@ -213,6 +218,20 @@ void norm(double *x, double *norm, int N)
 			cublasHandle_t h;
 			cublasCreate(&h);
 			cublasDnrm2(h, N, x, 1, norm);
+			cublasDestroy(h);
+		}
+	}
+}
+
+void dot(double *x, double *y, double *dot, int N)
+{
+	#pragma acc data present(x, y)
+	{
+		#pragma acc host_data use_device(x, y)
+		{
+			cublasHandle_t h;
+			cublasCreate(&h);
+			cublasDnrm2(h, N, x, 1, y, 1, dot);
 			cublasDestroy(h);
 		}
 	}
@@ -512,7 +531,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 				fastpoisson(v, M_temp, N);
 				#pragma acc parallel loop independent
 		  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
-	  		}
+	  		} //end pragma acc
 	  		
 	  		for (k=0; k<=i; k++) 
 			{

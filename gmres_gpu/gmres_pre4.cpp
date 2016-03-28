@@ -517,18 +517,18 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 		  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
 
 	  			// h(k,i) = qk*w
-				#pragma acc parallel loop independent present(H, Q, w)
 		  		for (k=0; k<=i; k++)
 				{
-					H[max_iter*k+i] = 0.0;
-					#pragma acc loop seq
+					temp = 0.0;
+					#pragma acc parallel loop reduction(+:temp)
 					for (j=0; j<N2; j++)
 					{
-						H[max_iter*k+i] += Q[N2*k+j]*w[j];
+						temp += Q[N2*k+j]*w[j];
 		  			}
+					H[max_iter*k+i] = temp;
 				}
 
-				#pragma acc parallel loop seq present(w, H, Q)
+				#pragma acc parallel loop seq
 				for (k=0; k<=i; k++)
 				{
 					#pragma acc loop independent
