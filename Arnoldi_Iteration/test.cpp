@@ -24,16 +24,19 @@ int main()
 	scanf("%d", &iter);
 	printf(" N = %d, max_iter = %d \n\n", N, iter);
 
-	double *Q, *H_gpu, *H_cpu, *v_gpu, *v_cpu;
+	double *Q, *H_oacc, *H_cublas, *H_cpu, *v_oacc, *v_cublas, *v_cpu;
 	double t1, t2, cpu_time, gpu_time;
 
 	Q = (double *) malloc(N*N*iter*sizeof(double));
 	H_cpu = (double *) malloc(iter*sizeof(double));
-	H_gpu = (double *) malloc(iter*sizeof(double));
+	H_oacc = (double *) malloc(iter*sizeof(double));
+	H_cublas = (double *) malloc(iter*sizeof(double));
 	v_cpu = (double *) malloc(N*N*sizeof(double));
-	v_gpu = (double *) malloc(N*N*sizeof(double));
+	v_oacc = (double *) malloc(N*N*sizeof(double));
+	v_cublas = (double *) malloc(N*N*sizeof(double));
 
 	initial(Q, v_cpu, v_gpu, N, iter);
+	printf(" v error = %e \n\n", error(v_gpu, v_cpu, N*N));
 
 	t1 = clock();
 	cpu_test(Q, H_cpu, v_cpu, N, iter);
@@ -45,8 +48,8 @@ int main()
 	t2 = clock();
 	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
-	printf(" H error = %f, v error = %f \n", error(H_cpu, H_gpu, iter), error(v_cpu, v_gpu, N*N));
-	printf(" \n cpu time = %f, gpu time = %f", cpu_time, gpu_time);
+	printf(" H error = %e, v error = %e \n", error(H_cpu, H_gpu, iter), error(v_cpu, v_gpu, N*N));
+	printf(" cpu time = %f, gpu time = %f \n\n", cpu_time, gpu_time);
 
 	return 0;
 }
@@ -59,7 +62,7 @@ void initial(double *Q, double *v_cpu, double *v_gpu, int N, int iter)
 	for (i=0; i<N*N*iter; i++)	Q[i] = sin(i);
 	for (i=0; i<N*N; i++)
 	{
-		v_cpu[i] = i/N;
+		v_cpu[i] = i;
 		v_gpu[i] = v_cpu[i];
 	}
 }
@@ -100,23 +103,21 @@ void cpu_test(double *Q, double *H, double *v, int N, int iter)
 void gpu_test(double *Q, double *H, double *v, int N, int iter)
 {
 	int i, j;
-	double temp;
 
 	#pragma acc data copyin(Q[0:N*N*iter]) copy(H[0:iter], v[0:N*N])
 	{
 		#pragma acc parallel loop independent
 		for (i=0; i<iter; i++)
 		{
-			temp = 0.0;
-			#pragma acc loop reduction(+:temp)
-			for (j=0; j<N*N; j++)	temp += Q[N*N*i+j]*v[j];
-			H[i] = temp;
+			H[i] = 0.0;
+			#pragma acc loop seq
+			for (j=0; j<N*N; j++)	H[i] += Q[N*N*i+j]*v[j];
 		}
 
 		#pragma acc parallel loop seq
 		for (i=0; i<iter; i++)
 		{
-			#pragma acc parallel loop independent
+			#pragma acc loop independent
 			for (j=0; j<N*N; j++)	v[j] -= H[i]*Q[N*N*i+j];
 		}
 	} //end pragma acc
