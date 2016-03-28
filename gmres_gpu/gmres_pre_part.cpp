@@ -1,9 +1,4 @@
 //*****************************************************************
-// Parallel part:
-//
-//*****************************************************************
-
-//*****************************************************************
 // Iterative template routine -- GMRES
 //
 // GMRES solves the unsymmetric linear system Ax = b using the 
@@ -209,42 +204,16 @@ void source(double *b, int N)
 
 //****************************************************************************
 
-void norm(double *x, double *norm, int N)
-{
-	#pragma acc data present(x)
-	{
-		#pragma acc host_data use_device(x)
-		{
-			cublasHandle_t h;
-			cublasCreate(&h);
-			cublasDnrm2(h, N, x, 1, norm);
-			cublasDestroy(h);
-		}
-	}
-}
-
-void dot(double *x, double *y, double *dot, int N)
-{
-	#pragma acc data present(x, y)
-	{
-		#pragma acc host_data use_device(x, y)
-		{
-			cublasHandle_t h;
-			cublasCreate(&h);
-			cublasDnrm2(h, N, x, 1, y, 1, dot);
-			cublasDestroy(h);
-		}
-	}
-}
-
-double norm_cpu(double *x, int N)
+double norm(double *x, int N)
 {
 	int i;
 	double norm;
-	norm = 0.0;
-	for (i=0; i<N; i++)	norm += x[i]*x[i];
+	norm=0.0;
+	for(i=0; i<N; i++)
+	{
+		norm += x[i]*x[i];
+	}
 	norm = sqrt(norm);
-
 	return norm;
 }
 
@@ -258,13 +227,6 @@ double inner_product(double *x, double *y, int N)
 		temp += x[i]*y[i];
 	}
 	return temp;
-}
-
-void q_subQ_gpu(double *q, double *Q, int N, int iter)
-{
-	int i;
-	#pragma acc parallel loop independent present(q, Q)
-	for (i=0; i<N; i++)	q[i] = Q[N*iter+i];
 }
 
 void q_subQ(double *q, double *Q, int N, int iter)
@@ -335,7 +297,7 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 // means matrix C = B * A
 void cublas_gemm(int n, double *c, double *b, double *a )
 {
-	#pragma acc data present(a, b, c)
+	#pragma acc data copyin(a[0:n*n], b[0:n*n]) copyout(c[0:n*n])
 	{
 		#pragma acc host_data use_device(a, b, c)
 		{
@@ -445,7 +407,7 @@ void fastpoisson(double *b, double *x, int N)
 	
 	h = 1.0/(Nx+1);
 	h2 = h*h;
-	#pragma acc data create(lamda[0:Nx], temp[0:Nx*Ny], temp_b[0:Nx*Ny], data2[0:Lx*Ny], data3[0:2*Lx*Ny]) present(b, x)
+	#pragma acc data create(lamda[0:Nx], temp[0:Nx*Ny], temp_b[0:Nx*Ny], data2[0:Lx*Ny], data3[0:2*Lx*Ny]), copyin(b[0:Nx*Ny]), copyout(x[0:Nx*Ny])
 	{ 
 		#pragma acc parallel loop independent
 		for (i=0; i<Nx*Ny; i++)	temp_b[i] = b[i];
@@ -480,10 +442,7 @@ void fastpoisson(double *b, double *x, int N)
 void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
 	int i, j, k, l, m, N2;
-	double resid, *normb, *beta, temp, *M_temp, *r, *q, *v, *M_b, *w, *cs, *sn, *s, *y, *Q, *H;
-	
-	normb = (double *) malloc(1*sizeof(double));
-	beta = (double *) malloc(1*sizeof(double));
+	double resid, normb, beta, temp, *M_temp, *r, *q, *v, *M_b, *w, *cs, *sn, *s, *y, *Q, *H;
 	
 	Q = (double *) malloc(N*N*(max_iter+1)*sizeof(double));
 	H = (double *) malloc((N+1)*max_iter*sizeof(double));
@@ -500,16 +459,13 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 	
 	N2 = N*N;
 
-	#pragma acc data copyin(b[0:N2]) copyout(M_b[0:N2], r[0:N2], normb[0], beta[0])
-	{
-		fastpoisson(b, M_b, N);
-		norm(M_b, normb, N2);
-		#pragma acc parallel loop independent
-		for (k=0; k<N2; k++)	r[k] = M_b[k];
-		norm(r, beta, N2);
-	}
+	fastpoisson(b, M_b, N);
+	normb = norm(M_b, N2);
+
+	for (k=0; k<N2; k++)	r[k] = M_b[k];
+	beta = norm(r, N2);
 	
-	if ((resid = *beta / *normb) <= tol) 
+	if ((resid = beta / normb) <= tol) 
 	{
 		tol = resid;
 		max_iter = 0;
@@ -518,20 +474,16 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 	for (m=0; m<max_restart; m++)
 	{
 
-		for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
+		for (i=0; i<N2; i++)	Q[i] = r[i]/beta;
 		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
-		s[0] = *beta;
+		s[0] = beta;
 		
 		for (i = 0; i<max_iter; i++) 
 		{
-			#pragma acc data copyin(Q[0:N2*(max_iter+1)], D[0:N2]) create(q[0:N2], v[0:N2], M_temp[0:N2]) copyout(w[0:N2])
-			{ 
-		  		q_subQ_gpu(q, Q, N2, i);
-		  		cublas_gemm(N, v, D, q);
-				fastpoisson(v, M_temp, N);
-				#pragma acc parallel loop independent
-		  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
-	  		} //end pragma acc
+	  		q_subQ(q, Q, N2, i);
+	  		cublas_gemm(N, v, D, q);
+			fastpoisson(v, M_temp, N);
+	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
 	  		
 	  		for (k=0; k<=i; k++) 
 			{
@@ -540,7 +492,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 				w_shift(w, q, H[max_iter*k+i], N2);
 	  		}
 	  		
-			H[max_iter*(i+1)+i] = norm_cpu(w, N2);
+			H[max_iter*(i+1)+i] = norm(w, N2);
 			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 			
 			for (k = 0; k < i; k++)
@@ -561,7 +513,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			temp = cs[i]*s[i];
 			s[i+1] = -1.0*sn[i]*s[i];
 			s[i] = temp;
-			resid = fabs(s[i+1] / *beta);
+			resid = fabs(s[i+1]/beta);
 	     	
 			if (resid < tol) 
 			{
@@ -601,17 +553,13 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			}
 		}
 
-		#pragma acc data copyin(D[0:N2], M_b[0:N2], x[0:N2]) create(v[0:N2], M_temp[0:N2]) copyout(r[0:N2])
-		{
-			cublas_gemm(N, v, D, x);
-			fastpoisson(v, M_temp, N);
-			#pragma acc parallel loop independent
-			for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
-			norm(r, beta, N2);
-		}
-		
-		s[i+1] = *beta;
-		resid = s[i+1] / *normb;
+		//matrix_matrix(D, x, v, N);
+		cublas_gemm(N, v, D, x);
+		fastpoisson(v, M_temp, N);
+		for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
+		beta = norm(r, N2);
+		s[i+1] = beta;
+		resid = s[i+1]/normb;
 		if ( resid < tol)	
 		{
 			printf(" resid = %e \n", resid);
