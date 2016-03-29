@@ -45,7 +45,6 @@ int main()
 	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
 	printf(" \n");
-
 	t1 = clock();
 	Arnoldi_cpu(A, Q_cpu, H_cpu, b, N, iter);
 	t2 = clock();
@@ -53,7 +52,7 @@ int main()
 
 	printf(" \n");
 	printf(" gpu times = %f \n cpu times = %f \n", gpu_time, cpu_time);
-	printf(" Q error = %f \n H error = %f \n\n", error(Q_gpu, Q_cpu, N*N*(iter+1)), error(H_gpu, H_cpu, (iter+1)*iter));
+//	printf(" Q error = %f \n H error = %f \n\n", error(Q_gpu, Q_cpu, N*N*(iter+1)), error(H_gpu, H_cpu, (iter+1)*iter));
 	return 0;
 }
 
@@ -64,7 +63,7 @@ void initial(double *A, double *b, int N)
 	int i;
 	for (i=0; i<N*N; i++)
 	{
-		A[i] = i/N;
+		A[i] = sin(i);
 		b[i] = cos(i);
 	}
 }
@@ -132,7 +131,7 @@ void dgemm_gpu(double *A, double *x, double *b, int N)
 			cublasCreate(&h);
 			const double alpha = 1.0;
 			const double beta = 0.0;
-			cublasDgemm(h, CUBLAS_OP_T, CUBLAS_OP_T, N, N, N, &alpha, A, N, x, N, &beta, b, N);
+			cublasDgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, A, N, x, N, &beta, b, N);
 			cublasDestroy(h);
 		}
 	}
@@ -150,32 +149,43 @@ void norm_cpu(double *x, double *nrm, int N)
 	*nrm = sqrt(temp);
 }
 
+void dgemm_cpu(double *A, double *x, double *b, int N)
+{
+	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A, N, x, N, 0.0, b, N);
+}
+
+void dgemv_cpu(double *A, double *x, double *b, int N)
+{
+	int i, j;
+	for (i=0; i<N; i++)	x[i] = sin(i);
+	for (i=0; i<N; i++)
+	{
+		b[i] = 0.0;
+		for (j=0; j<N; j++)	b[i] += A[N*i+j]*x[j];
+	}
+}
+
 //***********************************************************************************
 
 void Arnoldi_gpu(double *A, double *Q, double *H, double *b, int N, int iter)
 {
 	int i, j, k;
-	double *v, *q;
+	double *v, *q, *x1, *x2;
 	double *nrm, *dot, temp, t1, t2;
 
 	v = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
 
+	x1 = (double *) malloc(N*sizeof(double));
+	x2 = (double *) malloc(N*sizeof(double));
+
 	nrm = (double *) malloc(1*sizeof(double));
 	dot = (double *) malloc(1*sizeof(double));
 
-	t1 = clock();
-	#pragma acc data copyin(b[0:N*N]) copyout(Q[0:N*N*(iter+1)])
-	{
-		norm_gpu(b, nrm, N*N);
-		temp = *nrm;
-		#pragma acc parallel loop independent
-		for (k=0; k<N*N; k++)	Q[k] = b[k] / temp;
-	}
-	t2 = clock();
-	printf(" GPU First step times = %f , normb = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC, temp);
+        norm_cpu(b, nrm, N*N);
+	temp = *nrm;
+        for (k=0; k<N*N; k++)   Q[k] = b[k] / temp;
 
-	printf(" H[i,i] = \n");
 	t1 = clock();
 	for (i=0; i<iter; i++)
 	{
@@ -184,6 +194,7 @@ void Arnoldi_gpu(double *A, double *Q, double *H, double *b, int N, int iter)
 			// v= A*qi
 			#pragma acc parallel loop independent
 			for (k=0; k<N*N; k++)	q[k] = Q[N*N*i+k];
+			#pragma acc data present(A, q, v)
 			dgemm_gpu(A, q, v, N);
 
 			// hj,i = qj*v
@@ -191,10 +202,12 @@ void Arnoldi_gpu(double *A, double *Q, double *H, double *b, int N, int iter)
 			{
 				#pragma acc parallel loop independent
 				for (k=0; k<N*N; k++)	q[k] = Q[N*N*j+k];
+
 				dot_gpu(q, v, dot, N*N);
 				H[iter*j+i] = *dot;
 			}
-			printf(" %f ", H[iter*i+i]);
+
+//			if (i==0)	printf(" %f \n", H[0]);
 			// v = v - \sum h(j,i)*qj
 			#pragma acc parallel loop seq
 			for (j=0; j<=i; j++)
@@ -211,6 +224,7 @@ void Arnoldi_gpu(double *A, double *Q, double *H, double *b, int N, int iter)
 			#pragma acc parallel loop independent
 			for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / temp;
 		} //end pragma acc
+		dgemv_cpu(A, x1, x2, N);
 	}
 	printf(" \n");
 	t2 = clock();
@@ -222,36 +236,37 @@ void Arnoldi_gpu(double *A, double *Q, double *H, double *b, int N, int iter)
 void Arnoldi_cpu(double *A, double *Q, double *H, double *b, int N, int iter)
 {
 	int i, j, k;
-	double *v, *q;
-	double *nrm, t1, t2;
+	double *v, *q, *x1, *x2;
+	double *nrm, temp, t1, t2;
 
 	v = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
 
+        x1 = (double *) malloc(N*sizeof(double));
+        x2 = (double *) malloc(N*sizeof(double));
+
 	nrm = (double *) malloc(1*sizeof(double));
+//	dot = (double *) malloc(1*sizeof(double));
 
-	t1 = clock();
 	norm_cpu(b, nrm, N*N);
-	for (k=0; k<N*N; k++)	Q[k] = b[k] / *nrm;
-	t2 = clock();
-	printf(" CPU First step times = %f , normb = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC, *nrm);
+	temp = *nrm;
+	for (k=0; k<N*N; k++)	Q[k] = b[k]/temp;
 
-	printf(" H[i,i] = \n");
 	t1 = clock();
 	for (i=0; i<iter; i++)
 	{
 		// v= A*qi
 		for (k=0; k<N*N; k++)	q[k] = Q[N*N*i+k];
-		cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A, N, q, N, 0.0, v, N);
+		dgemm_cpu(A, q, v, N);
 
 		// h(j,i) = qj*v
 		for (j=0; j<=i; j++)
 		{
-			H[iter*j+i] = 0.0;
-			for (k=0; k<N*N; k++)	H[iter*j+i] += Q[N*N*j+k]*v[k];
+			for (k=0; k<N*N; k++)   q[k] = Q[N*N*j+k];
+			H[iter*j+i] = cblas_ddot(N*N, q, 1, v, 1);
 		}
 
-		printf(" %f ", H[iter*i+i]);
+//		if (i==0)       printf(" %f \n", H[0]);
 		// v = v - \sum h(j,i)*qj
 		for (j=0; j<=i; j++)
 		{
@@ -263,6 +278,8 @@ void Arnoldi_cpu(double *A, double *Q, double *H, double *b, int N, int iter)
 		H[iter*(i+1)+i] = *nrm;
 		// qi+1 = v/h(i+1,i)
 		for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / *nrm;
+
+		dgemv_cpu(A, x1, x2, N);
 	}
 	t2 = clock();
 	printf(" \n");

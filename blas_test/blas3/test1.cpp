@@ -52,8 +52,10 @@ void initial(double *A, double *x, int N)
 	for (i=0; i<N*N; i++)
 	{
 		A[i] = sin(i);
-		x[i] = i/N;
+		x[i] = (1.0*i)/N;
 	}
+	printf(" A[0:2] = %f %f %f \n", A[0], A[1], A[2]);
+	printf(" x[0:2] = %f %f %f \n", x[0], x[1], x[2]);
 }
 
 double error(double *x, double *y, int N)
@@ -78,14 +80,14 @@ int main()
 	printf(" N = %d \n", N);
 
 	double *A, *x, *b_cpu, *b_gpu;
-//	double *b_check;
+	double *b_check;
 	double t1, t2, cpu_time, gpu_time;
 
 	A = (double *) malloc(N*N*sizeof(double));
 	x = (double *) malloc(N*N*sizeof(double));
 	b_cpu = (double *) malloc(N*N*sizeof(double));
 	b_gpu = (double *) malloc(N*N*sizeof(double));
-//	b_check = (double *) malloc(N*N*sizeof(double));
+	b_check = (double *) malloc(N*N*sizeof(double));
 
 	initial(A, x, N);
 
@@ -100,11 +102,10 @@ int main()
 	t2 = clock();
 	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
-//	Dgemm(A, x, b_check, N);
-
-//	printf(" cpu error = %f \n", error(b_cpu, b_check, N*N));
-//	printf(" cpu error = %f \n", error(b_gpu, b_check, N*N));
-
+	Dgemm(A, x, b_check, N);
+	printf(" cpu error = %f \n", error(b_cpu, b_check, N*N));
+	printf(" cpu error = %f \n", error(b_gpu, b_check, N*N));
+	printf(" blas error = %f \n", error(b_cpu, b_gpu, N*N));
 	printf(" cpu times = %f \n", cpu_time);
 	printf(" gpu times = %f \n", gpu_time);
 	printf(" cpu times / gpu times = %f \n", cpu_time/gpu_time);
