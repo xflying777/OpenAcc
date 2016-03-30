@@ -1,0 +1,164 @@
+//*****************************************************************************
+//	Test:
+//	Krylov subspace Kn = {b, Ab, A^2b, ..., A^nb}
+//
+//	Test the computing times of cpu and gpu.
+//	Then check the Kn between cpu and gpu.
+//*****************************************************************************
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+#include "cublas_v2.h"
+#include "cblas.h"
+
+void initial_A(double *A, int N);
+void initial_b(double *b, int N);
+double error(double *x, double *y, int N);
+void cpu_test(double *A, double *b, double *K, int N, int iter);
+void gpu_test(double *A, double *b, double *K, int N, int iter);
+
+//******************************************************************************
+
+int main()
+{
+	int N, iter;
+	printf("\n Input N = ");
+	scanf("%d", &N);
+	printf(" Input max_iter = ");
+	scanf("%d", &iter);
+	printf(" N = %d, max_iter = %d \n\n", N, iter);
+
+	double *A, *K_cpu, *K_gpu, *b;
+	double t1, t2, cpu_time, gpu_time;
+
+	A = (double *) malloc(N*N*sizeof(double));
+	K_cpu = (double *) malloc(N*N*(iter+1)*sizeof(double));
+	K_gpu = (double *) malloc(N*N*(iter+1)*sizeof(double));
+	b = (double *) malloc(N*N*sizeof(double));
+
+	initial_A(A, N);
+	initial_b(b, N);
+
+	t1 = clock();
+	cpu_test(A, b, K_cpu, N, iter);
+	t2 = clock();
+	cpu_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
+
+	t1 = clock();
+	gpu_test(A, b, K_gpu, N, iter);
+	t2 = clock();
+	gpu_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
+
+	printf(" cpu times = %f, gpu times = %f \n", cpu_time, gpu_time);
+	printf(" Error between cpu and gpu, max error = %e \n", error(K_cpu, K_gpu, N*N*(iter+1)));
+
+	return 0;
+
+}
+
+//******************************************************************************
+
+void initial_A(double *A, int N)
+{
+	int i;
+	double h, h2;
+	h = 1.0/(N+1);
+	h2 = h*h;
+
+	for (i=0; i<N*N; i++)	A[i] = 0.0;
+	for (i=0; i<N; i++)	A[N*i+i] = -2.0*h2;
+	for (i=0; i<N-1; i++)
+	{
+		A[N*(i+1)+i] = 1.0*h2;
+		A[N*i+(i+1)] = 1.0*h2;
+	}
+}
+
+void initial_b(double *b, int N)
+{
+	int i;
+	for (i=0; i<N*N; i++)	b[i] = sin(1.0*i);
+}
+
+double error(double *x, double *y, int N)
+{
+	int i;
+	double error, temp;
+
+	for (i=0; i<N; i++)
+	{
+		temp = fabs(x[i] - y[i]);
+		if (temp > error)	error = temp;
+	}
+	return error;
+}
+
+//******************************************************************************
+
+void dgemm_gpu(double *A, double *x, double *b, int N)
+{
+	#pragma acc data present(A, x, b)
+	{
+		#pragma acc host_data use_device(A, x, b)
+		{
+			cublasHandle_t h;
+			cublasCreate(&h);
+			const double alpha = 1.0;
+			const double beta = 0.0;
+			cublasDgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, A, N, x, N, &beta, b, N);
+			cublasDestroy(h);
+		}
+	}
+}
+
+void dgemm_cpu(double *A, double *x, double *b, int N)
+{
+	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A, N, x, N, 0.0, b, N);
+}
+
+//******************************************************************************
+
+void cpu_test(double *A, double *b, double *K, int N, int iter)
+{
+	int i, j;
+	double *q, double *v;
+
+	q = (double *) malloc(N*N*sizeof(double));
+	v = (double *) malloc(N*N*sizeof(double));
+
+	for (i=0; i<N*N; i++)	K[i] = b[i];
+
+	for (i=0 i<iter; i++)
+	{
+		for (j=0 j<N*N; j++)	q[j] = K[N*N*i+j];
+		dgemm_cpu(A, q, v, N);
+		for (j=0; j<N*N; j++)	K[N*N*(i+1)+j] = v[j];
+	}
+}
+
+void gpu_test(double *A, double *b, double *K, int N, int iter)
+{
+	int i, j;
+	double *q, double *v;
+
+	q = (double *) malloc(N*N*sizeof(double));
+	v = (double *) malloc(N*N*sizeof(double));
+
+	#pragma acc data copyin(A[0:N*N], b[0:N*N]) copy(K[0:N*N*(iter+1)]) create(q[0:N*N], v[0:N*N])
+	{
+		#pragma acc parallel loop independent
+		for (i=0; i<N*N; i++)	K[i] = b[i];
+
+		for (i=0 i<iter; i++)
+		{
+			#pragma acc parallel loop independent
+			for (j=0 j<N*N; j++)	q[j] = K[N*N*i+j];
+			dgemm_gpu(A, q, v, N);
+			#pragma acc parallel loop independent
+			for (j=0; j<N*N; j++)	K[N*N*(i+1)+j] = v[j];
+		}
+	}
+}
+
