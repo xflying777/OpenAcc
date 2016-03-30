@@ -43,16 +43,18 @@ int main()
 	Arnoldi_gpu(A, Q_gpu, H_gpu, b, N, iter);
 	t2 = clock();
 	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	printf(" Q_gpu[0, N*N, N*N*(iter)] = %f %f %f \n", Q_gpu[0], Q_gpu[N*N], Q_gpu[N*N*iter]);
 
 	printf(" \n");
 	t1 = clock();
 	Arnoldi_cpu(A, Q_cpu, H_cpu, b, N, iter);
 	t2 = clock();
 	cpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
+	printf(" Q_cpu[0, N*N, N*N*(iter)] = %f %f %f \n", Q_cpu[0], Q_cpu[N*N], Q_cpu[N*N*iter]);
 
 	printf(" \n");
 	printf(" gpu times = %f \n cpu times = %f \n", gpu_time, cpu_time);
-//	printf(" Q error = %f \n H error = %f \n\n", error(Q_gpu, Q_cpu, N*N*(iter+1)), error(H_gpu, H_cpu, (iter+1)*iter));
+	printf(" Q error = %f \n H error = %f \n\n", error(Q_gpu, Q_cpu, N*N*(iter+1)), error(H_gpu, H_cpu, (iter+1)*iter));
 	return 0;
 }
 
@@ -61,10 +63,21 @@ int main()
 void initial(double *A, double *b, int N)
 {
 	int i;
+	double h, h2;
+	h = 1.0/(1+N);
+	h2 = h*h;
+
 	for (i=0; i<N*N; i++)
 	{
-		A[i] = sin(i);
-		b[i] = cos(i);
+		A[i] = 0.0;
+		b[i] = sin(1.0*i);
+	}
+
+	for (i=0; i<N; i++)	A[i] = -2.0;
+	for (i=0; i<N-1; i++)
+	{
+		A[N*(i+1)+i] = 1.0;
+		A[N*i+(i+1)] = 1.0;
 	}
 }
 
@@ -131,7 +144,7 @@ void dgemm_gpu(double *A, double *x, double *b, int N)
 			cublasCreate(&h);
 			const double alpha = 1.0;
 			const double beta = 0.0;
-			cublasDgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, A, N, x, N, &beta, b, N);
+			cublasDgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, x, N, A, N, &beta, b, N);
 			cublasDestroy(h);
 		}
 	}
@@ -224,11 +237,10 @@ void Arnoldi_gpu(double *A, double *Q, double *H, double *b, int N, int iter)
 			#pragma acc parallel loop independent
 			for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / temp;
 		} //end pragma acc
-		dgemv_cpu(A, x1, x2, N);
+//		dgemv_cpu(A, x1, x2, N);
 	}
-	printf(" \n");
 	t2 = clock();
-	printf(" Arnoldi times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+//	printf(" Arnoldi times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 }
 
 //***********************************************************************************
@@ -279,9 +291,8 @@ void Arnoldi_cpu(double *A, double *Q, double *H, double *b, int N, int iter)
 		// qi+1 = v/h(i+1,i)
 		for (k=0; k<N*N; k++)	Q[N*N*(i+1)+k] = v[k] / *nrm;
 
-		dgemv_cpu(A, x1, x2, N);
+//		dgemv_cpu(A, x1, x2, N);
 	}
 	t2 = clock();
-	printf(" \n");
-	printf(" Arnoldi times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+//	printf(" Arnoldi times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 }

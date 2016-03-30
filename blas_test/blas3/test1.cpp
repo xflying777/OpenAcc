@@ -16,6 +16,7 @@ void cpu_dgemm(double *A, double *x, double *b, int N)
 	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A, N, x, N, 0.0, b, N);
 }
 
+// Ax = b
 void gpu_dgemm(double *A, double *x, double *b, int N)
 {
 	#pragma acc data present(A, x, b)
@@ -26,7 +27,7 @@ void gpu_dgemm(double *A, double *x, double *b, int N)
 			cublasCreate(&h);
 			const double alpha = 1.0;
 			const double beta = 0.0;
-			cublasDgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, A, N, x, N, &beta, b, N);
+			cublasDgemm(h, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, x, N, A, N, &beta, b, N);
 			cublasDestroy(h);
 		}
 	}
@@ -51,7 +52,7 @@ void initial(double *A, double *x, int N)
 	int i;
 	for (i=0; i<N*N; i++)
 	{
-		A[i] = sin(i);
+		A[i] = sin(1.0*i);
 		x[i] = (1.0*i)/N;
 	}
 	printf(" A[0:2] = %f %f %f \n", A[0], A[1], A[2]);
@@ -67,7 +68,7 @@ double error(double *x, double *y, int N)
 	for (i=0; i<N; i++)
 	{
 		temp = fabs(x[i] - y[i]);
-		if (temp > error)	error = 0.0;
+		if (temp > error)	error = temp;
 	}
 	return error;
 }
@@ -103,8 +104,9 @@ int main()
 	gpu_time = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
 	Dgemm(A, x, b_check, N);
+	printf(" b_check[0:2] = %f %f %f \n", b_check[0], b_check[1], b_check[2]);
 	printf(" cpu error = %f \n", error(b_cpu, b_check, N*N));
-	printf(" cpu error = %f \n", error(b_gpu, b_check, N*N));
+	printf(" gpu error = %f \n", error(b_gpu, b_check, N*N));
 	printf(" blas error = %f \n", error(b_cpu, b_gpu, N*N));
 	printf(" cpu times = %f \n", cpu_time);
 	printf(" gpu times = %f \n", gpu_time);
