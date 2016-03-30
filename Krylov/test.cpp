@@ -45,11 +45,13 @@ int main()
 	cpu_test(A, b, K_cpu, N, iter);
 	t2 = clock();
 	cpu_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
+//	printf(" K_cpu[0:2] = %f %f %f , K_cpu[N*N-1] = %f \n", K_cpu[0], K_cpu[1], K_cpu[2], K_cpu[N*N-1]);
 
 	t1 = clock();
 	gpu_test(A, b, K_gpu, N, iter);
 	t2 = clock();
 	gpu_time = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
+//	printf(" K_gpu[0:2] = %f %f %f , K_gpu[N*N-1] = %f \n", K_gpu[0], K_gpu[1], K_gpu[2], K_gpu[N*N-1]);
 
 	printf(" cpu times = %f, gpu times = %f \n", cpu_time, gpu_time);
 	printf(" Error between cpu and gpu, max error = %e \n", error(K_cpu, K_gpu, N*N*(iter+1)));
@@ -74,12 +76,14 @@ void initial_A(double *A, int N)
 		A[N*(i+1)+i] = 1.0*h2;
 		A[N*i+(i+1)] = 1.0*h2;
 	}
+//	printf(" A[0:2] = %f %f %f \n", A[0], A[1], A[2]);
 }
 
 void initial_b(double *b, int N)
 {
 	int i;
 	for (i=0; i<N*N; i++)	b[i] = sin(1.0*i);
+//	printf(" b[0:2] = %f %f %f \n", b[0], b[1], b[2]);
 }
 
 double error(double *x, double *y, int N)
@@ -87,10 +91,16 @@ double error(double *x, double *y, int N)
 	int i;
 	double error, temp;
 
+	error = 0.0;
 	for (i=0; i<N; i++)
 	{
 		temp = fabs(x[i] - y[i]);
 		if (temp > error)	error = temp;
+//		if (temp != 0.0)
+//		{
+//			printf(" Break at %d index ! \n", i);
+//			break;
+//		}
 	}
 	return error;
 }
@@ -123,16 +133,16 @@ void dgemm_cpu(double *A, double *x, double *b, int N)
 void cpu_test(double *A, double *b, double *K, int N, int iter)
 {
 	int i, j;
-	double *q, double *v;
+	double *q, *v;
 
 	q = (double *) malloc(N*N*sizeof(double));
 	v = (double *) malloc(N*N*sizeof(double));
 
 	for (i=0; i<N*N; i++)	K[i] = b[i];
 
-	for (i=0 i<iter; i++)
+	for (i=0; i<iter; i++)
 	{
-		for (j=0 j<N*N; j++)	q[j] = K[N*N*i+j];
+		for (j=0; j<N*N; j++)	q[j] = K[N*N*i+j];
 		dgemm_cpu(A, q, v, N);
 		for (j=0; j<N*N; j++)	K[N*N*(i+1)+j] = v[j];
 	}
@@ -141,7 +151,7 @@ void cpu_test(double *A, double *b, double *K, int N, int iter)
 void gpu_test(double *A, double *b, double *K, int N, int iter)
 {
 	int i, j;
-	double *q, double *v;
+	double *q, *v;
 
 	q = (double *) malloc(N*N*sizeof(double));
 	v = (double *) malloc(N*N*sizeof(double));
@@ -151,10 +161,10 @@ void gpu_test(double *A, double *b, double *K, int N, int iter)
 		#pragma acc parallel loop independent
 		for (i=0; i<N*N; i++)	K[i] = b[i];
 
-		for (i=0 i<iter; i++)
+		for (i=0; i<iter; i++)
 		{
 			#pragma acc parallel loop independent
-			for (j=0 j<N*N; j++)	q[j] = K[N*N*i+j];
+			for (j=0; j<N*N; j++)	q[j] = K[N*N*i+j];
 			dgemm_gpu(A, q, v, N);
 			#pragma acc parallel loop independent
 			for (j=0; j<N*N; j++)	K[N*N*(i+1)+j] = v[j];
