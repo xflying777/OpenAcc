@@ -234,7 +234,7 @@ void Arnoldi_Iteration(double *A, double *Q, double *H, double *b, int N, int it
 {
 	int i, j, k;
 	double *v, *q;
-	double *nrm, t1, t2;
+	double *nrm;
 
 	v = (double *) malloc(N*N*sizeof(double));
 	q = (double *) malloc(N*N*sizeof(double));
