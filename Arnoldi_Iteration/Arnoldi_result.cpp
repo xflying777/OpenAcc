@@ -54,7 +54,7 @@ int main()
 
 	printf(" \n");
 	printf(" gpu times = %f \n cpu times = %f \n", gpu_time, cpu_time);
-	printf(" Q error = %f \n H error = %f \n\n", error(Q_gpu, Q_cpu, N*N*(iter+1)), error(H_gpu, H_cpu, (iter+1)*iter));
+	printf(" Q error = %e \n H error = %e \n\n", error(Q_gpu, Q_cpu, N*N*(iter+1)), error(H_gpu, H_cpu, (iter+1)*iter));
 	return 0;
 }
 
@@ -79,6 +79,11 @@ void initial(double *A, double *b, int N)
 		A[N*(i+1)+i] = 1.0;
 		A[N*i+(i+1)] = 1.0;
 	}
+//	for (i=0; i<N*N; i++)
+//	{
+//		A[i] = sin(i);
+//		b[i] = cos(i);
+//	}
 }
 
 void initial_QH(double *Q, double *H, int N, int iter)
