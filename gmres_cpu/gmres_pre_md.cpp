@@ -319,6 +319,7 @@ void fdst(double *x, int N)
 	// expand y[n] to 2N+2-points from x[n]
 	y_r[0] = y_i[0] = 0.0;
 	y_r[N+1] = y_i[N+1] = 0.0;
+
 	for(i=0;i<N;i++)
 	{
 		y_r[i+1] = x_r[i];
