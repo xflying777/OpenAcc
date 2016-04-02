@@ -20,7 +20,7 @@ int main()
 
 	double t1, t2;
 	double *A, *Q, *R;
-	
+
 	A = (double *) malloc(N*N*sizeof(double));
 	Q = (double *) malloc(N*N*sizeof(double));
 	R = (double *) malloc(N*N*sizeof(double));
@@ -31,13 +31,13 @@ int main()
 	Gram_Schmidt(A, Q, R, N);
 	t2 = clock();
 
-/*	printf("\n A = \n");
-	print_matrix(A, N);
-	printf("\n Q = \n");
-	print_matrix(Q, N);
-	printf("\n R = \n");
-	print_matrix(R, N);
-*/
+//	printf("\n A = \n");
+//	print_matrix(A, N);
+//	printf("\n Q = \n");
+//	print_matrix(Q, N);
+//	printf("\n R = \n");
+//	print_matrix(R, N);
+
 	printf(" times = %f \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
 	printf(" error = %e \n", error(A, Q, R, N));
 
