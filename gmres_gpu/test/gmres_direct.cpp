@@ -60,7 +60,7 @@ int main()
 
 	tol = 1.0e-6;
 	t1 = clock();
-	gmres(A, D, x, b, N, max_restart, max_iter, tol);
+	gmres(A, D, x, b, N, max_iter, tol);
 	t2 = clock();
 	exact_solution(u, N);
 
@@ -350,44 +350,44 @@ extern "C" void cuda_fft(double *d_data, int Lx, int Ny, void *stream)
 } 
 
 void fdst_gpu(double *data, double *data2, double *data3, int Nx, int Ny, int Lx) 
-{ 
-	double s; 
-	s = sqrt(2.0/(Nx+1)); 
-	#pragma acc data present(data3[0:2*Lx*Ny],data[0:Nx*Ny],data2[0:Lx*Ny]) 
-	{ 
-		expand_data(data, data2, Nx, Ny, Lx); 
-		expand_idata(data2, data3, Nx, Ny, Lx); 
+{
+	double s;
+	s = sqrt(2.0/(Nx+1));
+	#pragma acc data present(data3[0:2*Lx*Ny],data[0:Nx*Ny],data2[0:Lx*Ny])
+	{
+		expand_data(data, data2, Nx, Ny, Lx);
+		expand_idata(data2, data3, Nx, Ny, Lx);
 
 		// Copy data to device at start of region and back to host and end of region 
-		// Inside this region the device data pointer will be used 
-		#pragma acc host_data use_device(data3) 
-		{ 
-			void *stream = acc_get_cuda_stream(acc_async_sync); 
-			cuda_fft(data3, Lx, Ny, stream); 
-		} 
+		// Inside this region the device data pointer will be used
+		#pragma acc host_data use_device(data3)
+		{
+			void *stream = acc_get_cuda_stream(acc_async_sync);
+			cuda_fft(data3, Lx, Ny, stream);
+		}
 
-		#pragma acc parallel loop independent 
-		for (int i=0;i<Ny;i++) 
-		{ 
-			#pragma acc loop independent 
-			for (int j=0;j<Nx;j++)   data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2; 
-		} 
+		#pragma acc parallel loop independent
+		for (int i=0;i<Ny;i++)
+		{
+			#pragma acc loop independent
+			for (int j=0;j<Nx;j++)   data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
+		}
 	}// end data region
-} 
+}
 
-void transpose(double *data_in, double *data_out, int Nx, int Ny) 
-{ 
-	int i, j; 
-	#pragma acc parallel loop independent present(data_in[0:Nx*Ny],data_out[0:Ny*Nx]) 
-	for(i=0;i<Ny;i++) 
-	{ 
-		#pragma acc loop independent 
-		for(j=0;j<Nx;j++) 
-		{ 
-			data_out[i+j*Ny] = data_in[i*Nx+j]; 
-		} 
-	} 
-} 
+void transpose(double *data_in, double *data_out, int Nx, int Ny)
+{
+	int i, j;
+	#pragma acc parallel loop independent present(data_in[0:Nx*Ny],data_out[0:Ny*Nx])
+	for(i=0;i<Ny;i++)
+	{
+		#pragma acc loop independent
+		for(j=0;j<Nx;j++)
+		{
+			data_out[i+j*Ny] = data_in[i*Nx+j];
+		}
+	}
+}
 
 void fastpoisson(double *b, double *x, int N) 
 { 
@@ -469,7 +469,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 		norm_gpu(r, beta, N2);
 	}
 
-	if ((resid = *beta / *normb) <= tol) 
+	if ((resid = *beta / *normb) <= tol)
 	{
 		tol = resid;
 		max_iter = 0;
