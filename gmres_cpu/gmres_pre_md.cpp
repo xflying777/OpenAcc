@@ -537,7 +537,9 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 	     	
 			if (resid < tol) 
 			{
-				backsolve(H, s, y, N, max_iter, i);
+//				backsolve(H, s, y, N, max_iter, i);
+				for (k=0; k<max_iter+1; k++)	y[k] = s[k];
+				cblas_dtrsv(CblasRowMajor, CblasUpper, CblasNoTrans, CblasNonUnit, i, H, max_iter, y, 1);
 				for(j=0; j<N; j++)
 				{
 					for (l=0; l<N; l++)
