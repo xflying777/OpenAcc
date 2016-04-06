@@ -466,19 +466,12 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 		norm_gpu(M_b, normb, N2);
 		#pragma acc parallel loop independent
 		for (k=0; k<N2; k++)	r[k] = M_b[k];
-	}
-	beta = *normb;
+	} // end pragma acc
 
-	if ((resid = *beta / *normb) <= tol)
-	{
-		tol = resid;
-		max_iter = 0;
-  	}
-
-
-	for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
+	*beta = *normb;
 	for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
 	s[0] = *beta;
+	for (i=0; i<N2; i++)    Q[i] = r[i] / *beta;
 
 	for (i=0; i<max_iter; i++)
 	{
@@ -506,10 +499,9 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 			for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
 		}
 
-		norm_gpu(w, nrm_temp, N2);
-		H[max_iter*(i+1)+i] = *nrm_temp;
-		subQ_v_gpu(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
-		
+		H[max_iter*(i+1)+i] = norm_cpu(w, N2);
+		subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
+
 		for (k = 0; k < i; k++)
 		{
 			//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
