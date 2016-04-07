@@ -487,7 +487,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 
 	for (i=0; i<max_iter; i++)
 	{
-		#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2])
+		#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2], y[0:max_iter+1]) copyout(x[0:N2])
 		{
 	  		q_subQ_gpu(q, Q, N2, i);
 	  		cublas_gemm(N, v, D, q);
@@ -541,7 +541,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 				s[i+1] = -1.0*sn[i]*s[i];
 				s[i] = temp;
 				resid = fabs(s[i+1] / *beta);
-			}
+			} //end kernels
 
 			if (resid < tol)
 			{
@@ -551,8 +551,10 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 					cublasCreate(&h);
 					cublasDcopy(h, max_iter+1, s, 1, y, 1);
 					cublasDtrsv(h, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_NON_UNIT, i, H, max_iter, y, 1);
+					cublasDestroy(h);
+				}
 //				backsolve(H, s, y, N, max_iter, i);
-				#pragma acc parallel loop independet
+				#pragma acc parallel loop independent
 				for(j=0; j<N; j++)
 				{
 					#pragma acc loop independent
