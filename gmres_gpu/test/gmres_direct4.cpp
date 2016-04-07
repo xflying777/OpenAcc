@@ -433,15 +433,17 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 
 	for (i=0; i<max_iter; i++)
 	{
-		#pragma acc copyin(Q[0:N2*(max_iter+1)], D[0:N2]) copyout(q[0:N2], v[0:N2])
+		#pragma acc data copyin(Q[0:N2*(max_iter+1)], D[0:N2]) copyout(q[0:N2], v[0:N2])
 		{
 	  		q_subQ_gpu(q, Q, N2, i);
 	  		cublas_gemm(N, v, D, q);
-		} // end pragma acc		
-		#pragma acc copyin(v[0:N2]) copyout(M_temp[0:N2])
+		} // end pragma acc
+		#pragma acc data copyin(v[0:N2]) copyout(M_temp[0:N2])
 		{
 			fastpoisson(v, M_temp, N);
 		} // end pragma acc
+
+		printf(" First step pass. \n");
 
 		#pragma acc data copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], x[0:N2]) copyin(q[0:N2], M_temp[0:N2]) create(w[0:N2], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1], y[0:max_iter+1])
 		{
@@ -524,6 +526,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 				break;
 			}
 		} //end pragma acc
+		printf(" Second step pass. \n");
 	}//end for
 }
 
