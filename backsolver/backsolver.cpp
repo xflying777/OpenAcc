@@ -1,9 +1,17 @@
+//************************************************************************
+//	Triangular linear system solver with a single right-hand-side
+//	Solve A * x = b, for input matrix A sizeof(N * N) and vector b sizeof(N)
+//	In cublasDtrsv, it starts in CblasColMajor and is not acurrate enough.
+//
+//************************************************************************
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
 #include "cblas.h"
 #include "cublas_v2.h"
+
 
 double error(double *x, double *y, int N);
 void print_vector(double *x, int N);
@@ -32,13 +40,13 @@ int main()
 
 	initial(A, u, b, N);
 
-	printf(" A : \n");
+/*	printf(" A : \n");
 	print_matrix(A, N);
 	printf(" u : \n");
 	print_vector(u, N);
 	printf(" b : \n");
 	print_vector(b, N);
-
+*/
 	t1 = clock();
 	backsolve(A, b, x, N, N);
 	t2 = clock();
@@ -58,12 +66,13 @@ int main()
 	{
 		cublas_backsolver(A, x_cublas, b, N);
 	}
+//	printf(" cublas backsolver success. \n\n");
 	t2 = clock();
 	time3 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
-	printf(" x cublas : \n");
-	print_vector(x_cublas, N);
+//	printf(" x cublas : \n");
+//	print_vector(x_cublas, N);
 
-	printf(" backsolver times = %f, cblas_dtrsv times = %f, cublas_Dtrsv time = %f \n", time1, time2, time3);
+	printf(" backsolver times = %f \n cblas_dtrsv times = %f \n cublas_Dtrsv time = %f \n", time1, time2, time3);
 	printf(" error of backsolver = %e \n", error(x, u, N));
 	printf(" error of cblas backsolver = %e \n", error(x_blas, u, N));
 	printf(" error of cublas backsolver = %e \n", error(x_cublas, u, N));
@@ -86,7 +95,7 @@ double error(double *x, double *y, int N)
 	}
 	return error;
 }
-		
+
 void print_vector(double *x, int N)
 {
 	int i;
@@ -128,7 +137,7 @@ void backsolve(double *H, double *s, double *y, int N, int i)
 	// i = iter
 	int j, k;
 	double temp;
-	
+
 	for(j=i; j>=0; j--)
 	{
 		temp = s[j];
@@ -159,7 +168,9 @@ void cublas_backsolver(double *A, double *x, double *b, int N)
 			cublasHandle_t h;
 			cublasCreate(&h);
 			cublasDcopy(h, N, b, 1, x, 1);
-			cublasDtrsv(h, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUSPARSE_DIAG_TYPE_NON_UNIT, N, A, N, x, 1);
+//			printf(" cublasDcopy success. \n");
+			cublasDtrsv(h, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_NON_UNIT, N, A, N, x, 1);
+//			printf(" cublasDtrsv success. \n");
 			cublasDestroy(h);
 		}
 	}
