@@ -462,32 +462,31 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 	y = (double *) malloc((max_iter+1)*sizeof(double));
 
 	N2 = N*N;
-	
-	#pragma acc data copyin(b[0:N2]) copyout(M_b[0:N2], r[0:N2], normb[0], beta[0])
+
+	#pragma acc data copyin(D[0:N2], b[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1]) create(r[0:N2], q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2], y[0:max_iter+1]) copyout(x[0:N2])
 	{
-		fastpoisson(b, M_b, N);
-		norm_gpu(M_b, normb, N2);
+		fastpoisson(b, M_temp, N);
+		norm_gpu(M_temp, normb, N2);
 		#pragma acc parallel loop independent
-		for (k=0; k<N2; k++)	r[k] = M_b[k];
+		for (k=0; k<N2; k++)	r[k] = M_temp[k];
 //		norm_gpu(r, beta, N2);
-	}
+		*beta = *normb;
 
-	*beta = *normb;
+/*		if ((resid = *beta / *normb) <= tol)
+		{
+			tol = resid;
+			max_iter = 0;
+	  	}
+*/
+		#pragma acc kernels independent
+		{
+			for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
+			for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
+		}
+		s[0] = *beta;
 
-	if ((resid = *beta / *normb) <= tol)
-	{
-		tol = resid;
-		max_iter = 0;
-  	}
 
-
-	for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
-	for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
-	s[0] = *beta;
-
-
-	#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2], y[0:max_iter+1]) copyout(x[0:N2])
-	{	
+		
 		for (i=0; i<max_iter; i++)
 		{
 	  		q_subQ_gpu(q, Q, N2, i);
