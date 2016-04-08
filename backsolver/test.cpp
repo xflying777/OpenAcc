@@ -10,16 +10,14 @@
 #include <math.h>
 #include <time.h>
 #include "cblas.h"
-#include "cublas_v2.h"
 
 
 double error(double *x, double *y, int N);
 void print_vector(double *x, int N);
 void print_matrix(double *A, int N);
 void initial(double *A, double *u, double *b, int N);
-void backsolve(double *H, double *s, double *y, int N, int i);
+void backsolve(double *A, double *x, double *b, int size, int Ny);
 void cblas_backsolver(double *A, double *x, double *b, int N);
-void cublas_backsolver(double *A, double *x, double *b, int N);
 
 int main()
 {
@@ -28,54 +26,42 @@ int main()
 	scanf("%d", &N);
 	printf("\n N = %d \n\n", N);
 
-	double *A, *u, *x, *x_blas, *x_cublas, *b;
-	double t1, t2, time1, time2, time3;
+	double *A, *u, *x, *x_blas, *b;
+	double t1, t2, time1, time2;
 
 	A = (double *) malloc(N*N*sizeof(double));
 	u = (double *) malloc(N*sizeof(double));
 	x = (double *) malloc(N*sizeof(double));
 	x_blas = (double *) malloc(N*sizeof(double));
-	x_cublas = (double *) malloc(N*sizeof(double));
 	b = (double *) malloc(N*sizeof(double));
 
 	initial(A, u, b, N);
 
-/*	printf(" A : \n");
+	printf(" A : \n");
 	print_matrix(A, N);
 	printf(" u : \n");
 	print_vector(u, N);
 	printf(" b : \n");
 	print_vector(b, N);
-*/
+
 	t1 = clock();
-	backsolve(A, b, x, N, N);
+	backsolve(A, x, b, N, N);
 	t2 = clock();
 	time1 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
-//	printf(" x : \n");
-//	print_vector(x, N);
+	printf(" x : \n");
+	print_vector(x, N);
 
 	t1 = clock();
 	cblas_backsolver(A, x_blas, b, N);
 	t2 = clock();
 	time2 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
-//	printf(" x blas : \n");
-//	print_vector(x_blas, N);
+	printf(" x blas : \n");
+	print_vector(x_blas, N);
 
-	t1 = clock();
-	#pragma acc data copyin(A[0:N*N], b[0:N]) copyout(x_cublas[0:N])
-	{
-		cublas_backsolver(A, x_cublas, b, N);
-	}
-//	printf(" cublas backsolver success. \n\n");
-	t2 = clock();
-	time3 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
-//	printf(" x cublas : \n");
-//	print_vector(x_cublas, N);
 
-	printf(" backsolver times = %f \n cblas_dtrsv times = %f \n cublas_Dtrsv time = %f \n", time1, time2, time3);
+	printf(" backsolver times = %f \n cblas_dtrsv times = %f \n", time1, time2);
 	printf(" error of backsolver = %e \n", error(x, u, N));
 	printf(" error of cblas backsolver = %e \n", error(x_blas, u, N));
-	printf(" error of cublas backsolver = %e \n", error(x_cublas, u, N));
 	printf("\n");
 
 	return 0;
@@ -132,20 +118,21 @@ void initial(double *A, double *u, double *b, int N)
 //***********************************************************************************
 
 // Solve H * y = s
-void backsolve(double *H, double *s, double *y, int N, int i)
+void backsolve(double *A, double *x, double *b, int size, int Ny)
 {
-	// i = iter
-	int j, k;
-	double temp;
+	int i, j;
+	double *temp;
+	temp = (double *) malloc(size*sizeof(double));
 
-	for(j=i-1; j>=0; j--)
+	for (i=0; i<size; i++)	temp[i] = b[i];
+
+	for(j=size-1; j>=0; j--)
 	{
-		temp = s[j];
-		for(k=j+1; k<=i; k++)
+		x[j] = temp[j]/A[Ny*j+j];
+		for (i=0; i<j-1; i++)
 		{
-			temp -= y[k]*H[N*j+k];
+			temp[i] = temp[i] - A[Ny*i+j]*x[j];
 		}
-		y[j] = temp/H[N*j+j];
 	}
 }
 
@@ -157,22 +144,3 @@ void cblas_backsolver(double *A, double *x, double *b, int N)
 	cblas_dcopy(N, b, 1, x, 1);
 	cblas_dtrsv(CblasRowMajor, CblasUpper, CblasNoTrans, CblasNonUnit, N, A, N, x, 1);
 }
-
-// Solve A * x = b in GPU.
-void cublas_backsolver(double *A, double *x, double *b, int N)
-{
-	#pragma acc data present(A, x, b)
-	{
-		#pragma host_data use_device(A, x, b)
-		{
-			cublasHandle_t h;
-			cublasCreate(&h);
-			cublasDcopy(h, N, b, 1, x, 1);
-//			printf(" cublasDcopy success. \n");
-			cublasDtrsv(h, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_NON_UNIT, N, A, N, x, 1);
-//			printf(" cublasDtrsv success. \n");
-			cublasDestroy(h);
-		}
-	}
-}
-
