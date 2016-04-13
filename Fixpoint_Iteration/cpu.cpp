@@ -101,7 +101,7 @@ void initial(double *x0, double *b, double *Beta, double *D, double *u, int N)
 			Beta[N*i+j] =  sin(y);
 		}
 	}
-	
+
 	for (i=0; i<N*N; i++)
 	{
 		// initial x
@@ -118,8 +118,9 @@ void initial(double *x0, double *b, double *Beta, double *D, double *u, int N)
 		D[N*(i+1)+i] = -1.0*temp;
 		D[N*i+(i+1)] = temp;
 	}
+//	printf(" Initial finish. \n");
 }
-	
+
 //***********************************************************************************************************
 
 // b = alpha * A * x + beta * b;
@@ -133,16 +134,18 @@ void dgemm(double *b, double *A, double *x, int N)
 // Fast Fourier Transform in place for N = 2^p 
 void fdst(double *x, int N)
 {
+//	printf(" DST starts. \n");
 	int i, j, k, n, M, K;
 	double s, t_r, t_i, *x_r, *x_i, *y_r, *y_i;
-	
+
 	s = sqrt(2.0/(N+1));
-	K = 2*N + 2;	
+	K = 2*N + 2;
 	x_r = (double *) malloc(N*sizeof(double));
 	x_i = (double *) malloc(N*sizeof(double));
 	y_r = (double *) malloc(K*sizeof(double));
 	y_i = (double *) malloc(K*sizeof(double));
-	
+//	printf(" DST malloc finish. \n");
+
 	for(i=0;i<N;i++)
 	{
 		x_r[i] = x[i];
@@ -160,8 +163,8 @@ void fdst(double *x, int N)
 		y_r[N+i+2] = -1.0*x_r[N-1-i];
 		y_i[N+i+2] = -1.0*x_i[N-1-i];
 	}
-	
-	
+
+
 	i = j = 0;
 	while(i < K)
 	{
@@ -181,7 +184,7 @@ void fdst(double *x, int N)
 			j = j - M;
 			M = M / 2;
 		}
-		j = j + M;		
+		j = j + M;
 		i = i + 1;
 	}
 	// Butterfly structure
@@ -199,7 +202,6 @@ void fdst(double *x, int N)
 				j = i + n/2;
 				t_r = w_r * y_r[j] - w_i * y_i[j];
 				t_i = w_r * y_i[j] + w_i * y_r[j];
-				
 
 				y_r[j] = y_r[i] - t_r;
 				y_i[j] = y_i[i] - t_i;
@@ -210,69 +212,82 @@ void fdst(double *x, int N)
 		}
 		n = n * 2;
 	}
-	
+
 	// After fft(y[k]), Y[k] = fft(y[k]), Sx[k] = i*Y[k+1]/2
 	for(k=0;k<N;k++)
 	{
 		x[k] = -1.0*s*y_i[k+1]/2;
 	}
-	
+//	printf(" DST finish. \n");
+	free(x_r);
+	free(y_r);
+	free(x_i);
+	free(y_i);
 }
 
 // \Delta x = b
 void fastpoisson(double *b, double *x, int N)
 {
+//	printf(" Fast Poisson starts. \n");
 	int i, j;
 	double h, h2, *lamda, *temp, *tempb;
 
 	tempb = (double *) malloc(N*N*sizeof(double));
 	temp = (double *) malloc(N*sizeof(double));
 	lamda = (double *) malloc(N*sizeof(double));
+
+//	printf(" Fast Poisson malloc finish. \n");
 	h = 1.0/(N+1);
 	h2 = h*h;
-	
+
 	for(i=0; i<N*N; i++)	tempb[i] = b[i];
 
 	for(i=0; i<N; i++)
 	{
 		lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
 	}
-	
+
 	for (i=0; i<N; i++)
 	{
 		for (j=0; j<N; j++)	temp[j] = tempb[N*i+j];
 		fdst(temp, N);
 		for (j=0; j<N; j++)	tempb[N*i+j] = temp[j];
 	}
-	
+
+//	printf(" 1st DST finish. \n");
 	for (i=0; i<N; i++)
 	{
 		for (j=0; j<N; j++)	temp[j] = tempb[N*j+i];
 		fdst(temp, N);
 		for (j=0; j<N; j++)	tempb[N*j+i] = temp[j];
 	}
-	
+//	printf(" 2nd DST finish. \n");
+
 	for(i=0; i<N; i++)
 	{
-		for(j=0; j<N; j++) 
+		for(j=0; j<N; j++)
 		{
 			x[N*i+j] = -1.0*h2*tempb[N*i+j]/(lamda[i] + lamda[j]);
 		}
 	}
-	
+//	printf(" SxS finish. \n");
+
 	for (i=0; i<N; i++)
 	{
 		for (j=0; j<N; j++)	temp[j] = x[N*i+j];
 		fdst(temp, N);
+//		if( i < N)	printf(" DST temp finish at %d step. \n", i);
 		for (j=0; j<N; j++)	x[N*i+j] = temp[j];
 	}
-	
+//	printf(" 3rd DST finish. \n");
+
 	for (i=0; i<N; i++)
 	{
 		for (j=0; j<N; j++)	temp[j] = x[N*j+i];
 		fdst(temp, N);
 		for (j=0; j<N; j++)	x[N*j+i] = temp[j];
 	}
+//	printf(" Final DST finish. \n");
 //	printf(" fastpoisson success. \n");
 }
 
@@ -293,17 +308,20 @@ void fixpoint_iteration(double *Beta, double *D, double *x, double *b, int N, do
 		for (j=0; j<N*N; j++)	xk[j] = x[j];
 
 		dgemm(temp, D, xk, N);
+//		if (i == 0)	printf(" Dgemm finish. \n");
 
 		for (j=0; j<N*N; j++)	temp[j] = b[j] - Beta[j]*temp[j];
 
 		fastpoisson(temp, x, N);
+//		if(i == 0)	printf(" Fast Poisson finish. \n");
 
 		for (j=0; j<N*N; j++)	temp[j] = x[j] - xk[j];
 		error = cblas_dnrm2(N*N, temp, 1);
 
+//		printf(" Step %d finish. \n", i+1);
 		if ( error < tol)
 		{
-			printf(" Converges at %d step ! \n", i+1);
+			printf("\n Converges at %d step ! \n", i+1);
 			break;
 		}
 	}
