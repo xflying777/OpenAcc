@@ -17,7 +17,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
-#include "cblas.h"
+#include <cufft.h>
+#include "openacc.h"
+#include "cublas_v2.h"
 
 void initial(double *x, double *b, double *Beta, double *D, double *u, int N);
 double error(double *x, double *y, int N);
@@ -123,157 +125,162 @@ void initial(double *x0, double *b, double *Beta, double *D, double *u, int N)
 //***********************************************************************************************************
 
 // b = alpha * A * x + beta * b;
-void dgemm(double *b, double *A, double *x, int N)
+// Note : cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, A, n, B, n, &beta, C, n)
+// means matrix C = B * A
+void dgemm(int n, double *c, double *b, double *a )
 {
-	cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, 1.0, A, N, x, N, 0.0, b, N);
+	#pragma acc data present(a, b, c)
+	{
+		#pragma acc host_data use_device(a, b, c)
+		{
+			cublasHandle_t handle;
+			cublasCreate(&handle);
+			const double alpha = 1.0;
+			const double beta = 0.0;
+			cublasDgemm( handle, CUBLAS_OP_N, CUBLAS_OP_N, n,n,n, &alpha, a, n, b, n, &beta, c, n);
+			cublasDestroy(handle);
+		}
+	}
+}
+
+void norm(double *x, double *norm, int N)
+{
+	#pragma acc data present(x)
+	{
+		#pragma acc host_data use_device(x)
+		{
+			cublasHandle_t h;
+			cublasCreate(&h);
+			cublasDnrm2(h, N, x, 1, norm);
+			cublasDestroy(h);
+		}
+	}
 }
 
 //***********************************************************************************************************
 
-// Fast Fourier Transform in place for N = 2^p 
-void fdst(double *x, int N)
-{
-	int i, j, k, n, M, K;
-	double s, t_r, t_i, *x_r, *x_i, *y_r, *y_i;
-	
-	s = sqrt(2.0/(N+1));
-	K = 2*N + 2;	
-	x_r = (double *) malloc(N*sizeof(double));
-	x_i = (double *) malloc(N*sizeof(double));
-	y_r = (double *) malloc(K*sizeof(double));
-	y_i = (double *) malloc(K*sizeof(double));
-	
-	for(i=0;i<N;i++)
-	{
-		x_r[i] = x[i];
-		x_i[i] = 0.0;
-	}
 
-	// expand y[n] to 2N+2-points from x[n]
-	y_r[0] = y_i[0] = 0.0;
-	y_r[N+1] = y_i[N+1] = 0.0;
+void expand_data(double *data, double *data2, int Nx, int Ny, int Lx) 
+{ 
+	// expand data to 2N + 2 length 
+	#pragma acc parallel loop independent present(data[0:Nx*Ny],data2[0:Lx*Ny]) 
+	for(int i=0;i<Ny;i++) 
+	{ 
+		data2[Lx*i] = data2[Lx*i+Nx+1] = 0.0; 
+		#pragma acc loop independent 
+		for(int j=0;j<Nx;j++) 
+		{ 
+			data2[Lx*i+j+1] = data[Nx*i+j]; 
+			data2[Lx*i+Nx+j+2] = -1.0*data[Nx*i+Nx-1-j]; 
+		} 
+	} 
+} 
 
-	for(i=0;i<N;i++)
-	{
-		y_r[i+1] = x_r[i];
-		y_i[i+1] = x_i[i];
-		y_r[N+i+2] = -1.0*x_r[N-1-i];
-		y_i[N+i+2] = -1.0*x_i[N-1-i];
-	}
-	
-	
-	i = j = 0;
-	while(i < K)
-	{
-		if(i < j)
-		{
-			// swap y[i], y[j]
-			t_r = y_r[i];
-			t_i = y_i[i];
-			y_r[i] = y_r[j];
-			y_i[i] = y_i[j];
-			y_r[j] = t_r;
-			y_i[j] = t_i;
-		}
-		M = K/2;
-		while(j >= M & M > 0)
-		{
-			j = j - M;
-			M = M / 2;
-		}
-		j = j + M;		
-		i = i + 1;
-	}
-	// Butterfly structure
-	double theta, w_r, w_i;
-	n = 2;
-	while(n <= K)
-	{
-		for(k=0;k<n/2;k++)
-		{
-			theta = -2.0*k*M_PI/n;
-			w_r = cos(theta);
-			w_i = sin(theta);
-			for(i=k;i<K;i+=n)
-			{
-				j = i + n/2;
-				t_r = w_r * y_r[j] - w_i * y_i[j];
-				t_i = w_r * y_i[j] + w_i * y_r[j];
-				
+void expand_idata(double *data2, double *data3, int Nx, int Ny, int Lx) 
+{ 
+	#pragma acc parallel loop independent present(data2[0:Lx*Ny],data3[0:2*Lx*Ny]) 
+	for (int i=0;i<Ny;i++) 
+	{ 
+		#pragma acc loop independent 
+		for (int j=0;j<Lx;j++) 
+		{ 
+			data3[2*Lx*i+2*j] = data2[Lx*i+j]; 
+			data3[2*Lx*i+2*j+1] = 0.0; 
+		} 
+	} 
+} 
 
-				y_r[j] = y_r[i] - t_r;
-				y_i[j] = y_i[i] - t_i;
-				y_r[i] = y_r[i] + t_r;
-				y_i[i] = y_i[i] + t_i;
+extern "C" void cuda_fft(double *d_data, int Lx, int Ny, void *stream) 
+{ 
+	cufftHandle plan; 
+	cufftPlan1d(&plan, Lx, CUFFT_Z2Z, Ny); 
+	cufftSetStream(plan, (cudaStream_t)stream); 
+	cufftExecZ2Z(plan, (cufftDoubleComplex*)d_data, (cufftDoubleComplex*)d_data,CUFFT_FORWARD); 
+	cufftDestroy(plan); 
+} 
 
-			}
-		}
-		n = n * 2;
-	}
-	
-	// After fft(y[k]), Y[k] = fft(y[k]), Sx[k] = i*Y[k+1]/2
-	for(k=0;k<N;k++)
-	{
-		x[k] = -1.0*s*y_i[k+1]/2;
-	}
-	
-}
+void fdst_gpu(double *data, double *data2, double *data3, int Nx, int Ny, int Lx) 
+{ 
+	double s; 
+	s = sqrt(2.0/(Nx+1)); 
+	#pragma acc data present(data3[0:2*Lx*Ny],data[0:Nx*Ny],data2[0:Lx*Ny]) 
+	{ 
+		expand_data(data, data2, Nx, Ny, Lx); 
+		expand_idata(data2, data3, Nx, Ny, Lx); 
 
-// \Delta x = b
-void fastpoisson(double *b, double *x, int N)
-{
-	int i, j;
-	double h, h2, *lamda, *temp, *tempb;
+		// Copy data to device at start of region and back to host and end of region 
+		// Inside this region the device data pointer will be used 
+		#pragma acc host_data use_device(data3) 
+		{ 
+			void *stream = acc_get_cuda_stream(acc_async_sync); 
+			cuda_fft(data3, Lx, Ny, stream); 
+		} 
 
-	tempb = (double *) malloc(N*N*sizeof(double));
-	temp = (double *) malloc(N*sizeof(double));
-	lamda = (double *) malloc(N*sizeof(double));
-	h = 1.0/(N+1);
+		#pragma acc parallel loop independent 
+		for (int i=0;i<Ny;i++) 
+		{ 
+			#pragma acc loop independent 
+			for (int j=0;j<Nx;j++)   data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2; 
+		} 
+	}// end data region
+} 
+
+void transpose(double *data_in, double *data_out, int Nx, int Ny) 
+{ 
+	int i, j; 
+	#pragma acc parallel loop independent present(data_in[0:Nx*Ny],data_out[0:Ny*Nx]) 
+	for(i=0;i<Ny;i++) 
+	{ 
+		#pragma acc loop independent 
+		for(j=0;j<Nx;j++) 
+		{ 
+			data_out[i+j*Ny] = data_in[i*Nx+j]; 
+		} 
+	} 
+} 
+
+void fastpoisson(double *b, double *x, int N) 
+{ 
+	int i, j, Nx, Ny, Lx;
+	double h, h2, *lamda, *temp, *temp_b, *data2, *data3;
+
+	Nx = Ny = N;
+	Lx = 2*Nx + 2;
+	data2 = (double *) malloc(Lx*Ny*sizeof(double));
+	data3 = (double *) malloc(2*Lx*Ny*sizeof(double));
+	temp = (double *) malloc(Nx*Ny*sizeof(double));
+	temp_b = (double *) malloc(Nx*Ny*sizeof(double));
+	lamda = (double *) malloc(Nx*sizeof(double));
+
+	h = 1.0/(Nx+1);
 	h2 = h*h;
-	
-	for(i=0; i<N*N; i++)	tempb[i] = b[i];
+	#pragma acc data create(lamda[0:Nx], temp[0:Nx*Ny], temp_b[0:Nx*Ny], data2[0:Lx*Ny], data3[0:2*Lx*Ny]) present(b, x)
+	{ 
+		#pragma acc parallel loop independent
+		for (i=0; i<Nx*Ny; i++)	temp_b[i] = b[i];
+		#pragma acc parallel loop independent 
+		for(i=0;i<Nx;i++)	lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
 
-	for(i=0; i<N; i++)
-	{
-		lamda[i] = 2 - 2*cos((i+1)*M_PI*h);
-	}
-	
-	for (i=0; i<N; i++)
-	{
-		for (j=0; j<N; j++)	temp[j] = tempb[N*i+j];
-		fdst(temp, N);
-		for (j=0; j<N; j++)	tempb[N*i+j] = temp[j];
-	}
-	
-	for (i=0; i<N; i++)
-	{
-		for (j=0; j<N; j++)	temp[j] = tempb[N*j+i];
-		fdst(temp, N);
-		for (j=0; j<N; j++)	tempb[N*j+i] = temp[j];
-	}
-	
-	for(i=0; i<N; i++)
-	{
-		for(j=0; j<N; j++) 
-		{
-			x[N*i+j] = -1.0*h2*tempb[N*i+j]/(lamda[i] + lamda[j]);
+		fdst_gpu(temp_b, data2, data3, Nx, Ny, Lx); 
+		transpose(temp_b, temp, Nx, Ny); 
+		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
+		transpose(temp, temp_b, Ny, Nx); 
+
+		#pragma acc parallel loop independent 
+		for(i=0;i<Ny;i++) 
+		{ 
+			#pragma acc loop independent 
+			for(j=0;j<Nx;j++) 
+			{ 
+				x[Nx*i+j] = -1.0*h2*temp_b[Nx*i+j]/(lamda[i] + lamda[j]); 
+			} 
 		}
-	}
-	
-	for (i=0; i<N; i++)
-	{
-		for (j=0; j<N; j++)	temp[j] = x[N*i+j];
-		fdst(temp, N);
-		for (j=0; j<N; j++)	x[N*i+j] = temp[j];
-	}
-	
-	for (i=0; i<N; i++)
-	{
-		for (j=0; j<N; j++)	temp[j] = x[N*j+i];
-		fdst(temp, N);
-		for (j=0; j<N; j++)	x[N*j+i] = temp[j];
-	}
-//	printf(" fastpoisson success. \n");
+
+		fdst_gpu(x, data2, data3, Nx, Ny, Lx); 
+		transpose(x, temp, Nx, Ny); 
+		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
+		transpose(temp, x, Ny, Nx); 
+	} // end data region 
 }
 
 //***********************************************************************************************************
@@ -283,28 +290,35 @@ void fixpoint_iteration(double *Beta, double *D, double *x, double *b, int N, do
 {
 	int i, j;
 
-	double *xk, *temp, error;
+	double *xk, *temp, *error;
 
 	xk = (double *) malloc(N*N*sizeof(double));
 	temp = (double *) malloc(N*N*sizeof(double));
+	error = (double *) malloc(1*sizeof(double));
 
-	for (i=0; i<N*N; i++)
+	#pragma acc data copyin(D[0:N*N], b[0:N*N], Beta[0:N*N]) copy(x[0:N*N]) create(xk[0:N*N], temp[0:N*N])
 	{
-		for (j=0; j<N*N; j++)	xk[j] = x[j];
-
-		dgemm(temp, D, xk, N);
-
-		for (j=0; j<N*N; j++)	temp[j] = b[j] - Beta[j]*temp[j];
-
-		fastpoisson(temp, x, N);
-
-		for (j=0; j<N*N; j++)	temp[j] = x[j] - xk[j];
-		error = cblas_dnrm2(N*N, temp, 1);
-
-		if ( error < tol)
+		for (i=0; i<N*N; i++)
 		{
-			printf(" Converges at %d step ! \n", i+1);
-			break;
+			#pragma acc parallel loop independent
+			for (j=0; j<N*N; j++)	xk[j] = x[j];
+
+			dgemm(N, temp, D, xk);
+
+			#pragma acc parallel loop independent
+			for (j=0; j<N*N; j++)	temp[j] = b[j] - Beta[j]*temp[j];
+
+			fastpoisson(temp, x, N);
+
+			#pragma acc parallel loop independent
+			for (j=0; j<N*N; j++)	temp[j] = x[j] - xk[j];
+			norm(temp, error, N*N);
+
+			if ( *error < tol)
+			{
+				printf(" Converges at %d step ! \n", i+1);
+				break;
+			}
 		}
-	}
+	} // end pragma region
 }
