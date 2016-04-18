@@ -24,6 +24,7 @@
 #include <math.h>
 #include <time.h>
 #include <cblas.h>
+#include <fftw3.h>
 
 void print_vector(double *x, int N);
 void print_matrixH(double *x, int N, int k);
@@ -300,90 +301,34 @@ void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 // Fast Fourier Transform in place for N = 2^p 
 void fdst(double *x, int N)
 {
-	int i, j, k, n, M, K;
-	double s, t_r, t_i, *x_r, *x_i, *y_r, *y_i;
+	int i, K;
+	double s;
+	fftw_complex *in, *out;
 	
 	s = sqrt(2.0/(N+1));
-	K = 2*N + 2;	
-	x_r = (double *) malloc(N*sizeof(double));
-	x_i = (double *) malloc(N*sizeof(double));
-	y_r = (double *) malloc(K*sizeof(double));
-	y_i = (double *) malloc(K*sizeof(double));
-	
-	for(i=0;i<N;i++)
+	K = 2*N + 2;
+
+	in = (fftw_complex *) malloc(K*sizeof(fftw_complex));
+	out = (fftw_complex *) malloc(K*sizeof(fftw_complex));
+
+	in[0][0] = in[0][1] = 0.0;
+	in[N+1][0] = in[N+1][1] = 0.0;
+
+	for (i=0; i<N; i++)
 	{
-		x_r[i] = x[i];
-		x_i[i] = 0.0;
+		in[i+1][0] = x[i];
+		in[i+1][1] = 0.0;
+		in[N+i+2][0] = -1.0*x[N-1-i];
+		in[N+i+2][1] = 0.0;
 	}
 
-	// expand y[n] to 2N+2-points from x[n]
-	y_r[0] = y_i[0] = 0.0;
-	y_r[N+1] = y_i[N+1] = 0.0;
-
-	for(i=0;i<N;i++)
-	{
-		y_r[i+1] = x_r[i];
-		y_i[i+1] = x_i[i];
-		y_r[N+i+2] = -1.0*x_r[N-1-i];
-		y_i[N+i+2] = -1.0*x_i[N-1-i];
-	}
-	
-	
-	i = j = 0;
-	while(i < K)
-	{
-		if(i < j)
-		{
-			// swap y[i], y[j]
-			t_r = y_r[i];
-			t_i = y_i[i];
-			y_r[i] = y_r[j];
-			y_i[i] = y_i[j];
-			y_r[j] = t_r;
-			y_i[j] = t_i;
-		}
-		M = K/2;
-		while(j >= M & M > 0)
-		{
-			j = j - M;
-			M = M / 2;
-		}
-		j = j + M;		
-		i = i + 1;
-	}
-	// Butterfly structure
-	double theta, w_r, w_i;
-	n = 2;
-	while(n <= K)
-	{
-		for(k=0;k<n/2;k++)
-		{
-			theta = -2.0*k*M_PI/n;
-			w_r = cos(theta);
-			w_i = sin(theta);
-			for(i=k;i<K;i+=n)
-			{
-				j = i + n/2;
-				t_r = w_r * y_r[j] - w_i * y_i[j];
-				t_i = w_r * y_i[j] + w_i * y_r[j];
-				
-
-				y_r[j] = y_r[i] - t_r;
-				y_i[j] = y_i[i] - t_i;
-				y_r[i] = y_r[i] + t_r;
-				y_i[i] = y_i[i] + t_i;
-
-			}
-		}
-		n = n * 2;
-	}
+	fftw_plan plan;
+	plan = fftw_plan_dft_1d(K, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftw_execute(plan);
+	fftw_destroy_plan(plan);
 	
 	// After fft(y[k]), Y[k] = fft(y[k]), Sx[k] = i*Y[k+1]/2
-	for(k=0;k<N;k++)
-	{
-		x[k] = -1.0*s*y_i[k+1]/2;
-	}
-	
+	for (i=0; i<N; i++)	x[i] = -1.0*s*out[i+1][1]/2.0;	
 }
 
 void fastpoisson(double *b, double *x, int N)
@@ -494,13 +439,14 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			fastpoisson(v, M_temp, N);
 	  		for (k=0; k<N2; k++)	w[k] = q[k] + M_temp[k];
 	  		
-/*	  		for (k=0; k<=i; k++) 
+	  		for (k=0; k<=i; k++) 
 			{
 				q_subQ(q, Q, N2, k);
 				H[max_iter*k+i] = inner_product(q, w, N2);
+				w_shift(w, q, H[max_iter*k+i], N2);
 	  		}
-*/
-			for (k=0; k<=i; k++)
+
+/*			for (k=0; k<=i; k++)
 			{
 				H[max_iter*k+i] = 0.0;
 				for (j=0; j<N2; j++)	H[max_iter*k+i] += Q[N2*k+j]*w[j];
@@ -510,7 +456,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, i
 			{
 				for (j=0; j<N2; j++)	w[j] = w[j] - H[max_iter*k+i]*Q[N2*k+j];
 			}
-	  		
+*/	  		
 	  		norm(w, temp_nrm, N2);
 			H[max_iter*(i+1)+i] = *temp_nrm;
 			subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
