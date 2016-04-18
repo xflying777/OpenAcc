@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <fftw3.h>
 #include "cblas.h"
 
 void initial(double *x, double *b, double *Beta, double *D, double *u, int N);
@@ -131,104 +132,46 @@ void dgemm(double *b, double *A, double *x, int N)
 
 //***********************************************************************************************************
 
-// Fast Fourier Transform in place for N = 2^p 
+// Fast Fourier Transform
 void fdst(double *x, int N)
 {
-//	printf(" DST starts. \n");
-	int i, j, k, n, M, K;
-	double s, t_r, t_i, *x_r, *x_i, *y_r, *y_i;
-
+	int i, K;
+	double s;
+	fftw_complex *in, *out;
+	
 	s = sqrt(2.0/(N+1));
 	K = 2*N + 2;
-	x_r = (double *) malloc(N*sizeof(double));
-	x_i = (double *) malloc(N*sizeof(double));
-	y_r = (double *) malloc(K*sizeof(double));
-	y_i = (double *) malloc(K*sizeof(double));
-//	printf(" DST malloc finish. \n");
 
-	for(i=0;i<N;i++)
+	in = (fftw_complex *) malloc(K*sizeof(fftw_complex));
+	out = (fftw_complex *) malloc(K*sizeof(fftw_complex));
+
+	in[0][0] = in[0][1] = 0.0;
+	in[N+1][0] = in[N+1][1] = 0.0;
+
+	for (i=0; i<N; i++)
 	{
-		x_r[i] = x[i];
-		x_i[i] = 0.0;
+		in[i+1][0] = x[i];
+		in[i+1][1] = 0.0;
+		in[N+i+2][0] = -1.0*x[N-1-i];
+		in[N+i+2][1] = 0.0;
 	}
 
-	// expand y[n] to 2N+2-points from x[n]
-	y_r[0] = y_i[0] = 0.0;
-	y_r[N+1] = y_i[N+1] = 0.0;
-
-	for(i=0;i<N;i++)
-	{
-		y_r[i+1] = x_r[i];
-		y_i[i+1] = x_i[i];
-		y_r[N+i+2] = -1.0*x_r[N-1-i];
-		y_i[N+i+2] = -1.0*x_i[N-1-i];
-	}
-
-
-	i = j = 0;
-	while(i < K)
-	{
-		if(i < j)
-		{
-			// swap y[i], y[j]
-			t_r = y_r[i];
-			t_i = y_i[i];
-			y_r[i] = y_r[j];
-			y_i[i] = y_i[j];
-			y_r[j] = t_r;
-			y_i[j] = t_i;
-		}
-		M = K/2;
-		while(j >= M & M > 0)
-		{
-			j = j - M;
-			M = M / 2;
-		}
-		j = j + M;
-		i = i + 1;
-	}
-	// Butterfly structure
-	double theta, w_r, w_i;
-	n = 2;
-	while(n <= K)
-	{
-		for(k=0;k<n/2;k++)
-		{
-			theta = -2.0*k*M_PI/n;
-			w_r = cos(theta);
-			w_i = sin(theta);
-			for(i=k;i<K;i+=n)
-			{
-				j = i + n/2;
-				t_r = w_r * y_r[j] - w_i * y_i[j];
-				t_i = w_r * y_i[j] + w_i * y_r[j];
-
-				y_r[j] = y_r[i] - t_r;
-				y_i[j] = y_i[i] - t_i;
-				y_r[i] = y_r[i] + t_r;
-				y_i[i] = y_i[i] + t_i;
-
-			}
-		}
-		n = n * 2;
-	}
-
+	fftw_plan plan;
+	plan = fftw_plan_dft_1d(K, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftw_execute(plan);
+	fftw_destroy_plan(plan);
+	
 	// After fft(y[k]), Y[k] = fft(y[k]), Sx[k] = i*Y[k+1]/2
-	for(k=0;k<N;k++)
-	{
-		x[k] = -1.0*s*y_i[k+1]/2;
-	}
-//	printf(" DST finish. \n");
-	free(x_r);
-	free(y_r);
-	free(x_i);
-	free(y_i);
+	for (i=0; i<N; i++)	x[i] = -1.0*s*out[i+1][1]/2.0;	
+
+	free(in);
+	free(out);
 }
 
 // \Delta x = b
 void fastpoisson(double *b, double *x, int N)
 {
-//	printf(" Fast Poisson starts. \n");
+
 	int i, j;
 	double h, h2, *lamda, *temp, *tempb;
 
@@ -236,7 +179,6 @@ void fastpoisson(double *b, double *x, int N)
 	temp = (double *) malloc(N*sizeof(double));
 	lamda = (double *) malloc(N*sizeof(double));
 
-//	printf(" Fast Poisson malloc finish. \n");
 	h = 1.0/(N+1);
 	h2 = h*h;
 
@@ -254,14 +196,12 @@ void fastpoisson(double *b, double *x, int N)
 		for (j=0; j<N; j++)	tempb[N*i+j] = temp[j];
 	}
 
-//	printf(" 1st DST finish. \n");
 	for (i=0; i<N; i++)
 	{
 		for (j=0; j<N; j++)	temp[j] = tempb[N*j+i];
 		fdst(temp, N);
 		for (j=0; j<N; j++)	tempb[N*j+i] = temp[j];
 	}
-//	printf(" 2nd DST finish. \n");
 
 	for(i=0; i<N; i++)
 	{
@@ -270,16 +210,13 @@ void fastpoisson(double *b, double *x, int N)
 			x[N*i+j] = -1.0*h2*tempb[N*i+j]/(lamda[i] + lamda[j]);
 		}
 	}
-//	printf(" SxS finish. \n");
 
 	for (i=0; i<N; i++)
 	{
 		for (j=0; j<N; j++)	temp[j] = x[N*i+j];
 		fdst(temp, N);
-//		if( i < N)	printf(" DST temp finish at %d step. \n", i);
 		for (j=0; j<N; j++)	x[N*i+j] = temp[j];
 	}
-//	printf(" 3rd DST finish. \n");
 
 	for (i=0; i<N; i++)
 	{
@@ -287,8 +224,6 @@ void fastpoisson(double *b, double *x, int N)
 		fdst(temp, N);
 		for (j=0; j<N; j++)	x[N*j+i] = temp[j];
 	}
-//	printf(" Final DST finish. \n");
-//	printf(" fastpoisson success. \n");
 }
 
 //***********************************************************************************************************

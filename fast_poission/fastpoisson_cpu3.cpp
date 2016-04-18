@@ -69,7 +69,7 @@ void initial(double *u, double *b, int N)
 	}
 }
 
-// Fast Fourier Transform in place for N = 2^p 
+// Fast Fourier Transform
 void fdst(double *x, int N)
 {
 	int i, K;
