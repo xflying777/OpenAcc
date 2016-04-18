@@ -329,6 +329,9 @@ void fdst(double *x, int N)
 	
 	// After fft(y[k]), Y[k] = fft(y[k]), Sx[k] = i*Y[k+1]/2
 	for (i=0; i<N; i++)	x[i] = -1.0*s*out[i+1][1]/2.0;	
+
+	free(in);
+	free(out);
 }
 
 void fastpoisson(double *b, double *x, int N)
