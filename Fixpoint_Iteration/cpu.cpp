@@ -26,10 +26,11 @@ void fixpoint_iteration(double *Beta, double *D, double *x, double *b, int N, do
 
 int main()
 {
-	int N, p;
-	printf("\n Input N = 2^p - 1, p = ");
-	scanf("%d", &p);
-	N = pow(2, p) - 1;
+	printf("\n");
+	int N, p, q, r;
+	printf(" Input N = 2^p * 3^q * 5^r - 1, (p, q, r) =  ");
+	scanf("%d %d %d", &p, &q, &r);
+	N = pow(2, p) * pow(3, q) * pow(5, r) - 1;
 	printf(" N = %d \n\n", N);
 
 	double *x, *b, *Beta, *D, *u;

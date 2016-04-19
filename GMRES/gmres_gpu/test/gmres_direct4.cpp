@@ -37,14 +37,17 @@ double error(double *x, double *y, int N);
 
 int main()
 {
-	int p, N, max_iter;
+	int p, q, r, N, max_restart, max_iter;
 	clock_t t1, t2;
-	printf("\n Please input N = 2^p -1, p =  ");
-	scanf("%d", &p);
-	N = pow(2, p) - 1;
+	printf("\n");
+	printf(" Input N = 2^p * 3^q * 5^r - 1, (p, q, r) =  ");
+	scanf("%d %d %d", &p, &q, &r);
+	N = pow(2, p) * pow(3, q) * pow(5, r) - 1;
+	printf(" Please input max restart times max_restart = ");
+	scanf("%d",&max_restart);
 	printf(" Please input max iteration times max_iter = ");
 	scanf("%d",&max_iter);
-	printf("\n N = %d , max_iter = %d \n \n", N, max_iter);
+	printf("\n N = %d , max_restart = %d , max_iter = %d \n \n", N, max_restart, max_iter);
 
 	double *A, *D, *x, *b, *u, tol;
 	A = (double *) malloc(N*N*sizeof(double));
@@ -443,7 +446,7 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 			fastpoisson(v, M_temp, N);
 		} // end pragma acc
 
-		printf(" First step pass. \n");
+//		printf(" First step pass. \n");
 
 		#pragma acc data copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], x[0:N2]) copyin(q[0:N2], M_temp[0:N2]) create(w[0:N2], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1], y[0:max_iter+1])
 		{
