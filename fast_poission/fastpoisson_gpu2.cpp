@@ -1,6 +1,6 @@
  
 //******************************************************************************* 
-Using cufft to do the discrete sine transform and solve the Poisson equation. 
+//Using cufft to do the discrete sine transform and solve the Poisson equation. 
 //*******************************************************************************
 
 #include <stdio.h> 
@@ -18,16 +18,16 @@ void print_matrix(float *x, int N);
 
 int main() 
 { 
-	int p, q, r, Nx, Ny, Lx; 
+	int p, q, r, s, Nx, Ny, Lx; 
 	float *x, *u, *b, *data2, *data3; 
 	clock_t t1, t2; 
 	
 	// Initialize the numbers of discrete points. 
 	// Here we consider Nx = Ny.
 	printf("\n");
-	printf(" Input N = 2^p * 3^q * 5^r - 1, (p, q, r) =  ");
-	scanf("%d %d %d", &p, &q, &r);
-	Nx = pow(2, p) * pow(3, q) * pow(5, r) - 1;
+	printf(" Input N = 2^p * 3^q * 5^r * 7^s - 1, (p, q, r, s) =  ");
+	scanf("%d %d %d %d", &p, &q, &r, &s);
+	Nx = pow(2, p) * pow(3, q) * pow(5, r) * pow(7, s) - 1;
 	printf(" N = %d \n\n", Nx);
 	Ny = Nx; 
 

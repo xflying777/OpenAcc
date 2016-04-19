@@ -37,14 +37,17 @@ double error(double *x, double *y, int N);
 
 int main()
 {
-	int p, N, max_iter;
+	int p, q, r, N, max_restart, max_iter;
 	clock_t t1, t2;
-	printf("\n Please input N = 2^p -1, p =  ");
-	scanf("%d", &p);
-	N = pow(2, p) - 1;
+	printf("\n");
+	printf(" Input N = 2^p * 3^q * 5^r - 1, (p, q, r) =  ");
+	scanf("%d %d %d", &p, &q, &r);
+	N = pow(2, p) * pow(3, q) * pow(5, r) - 1;
+	printf(" Please input max restart times max_restart = ");
+	scanf("%d",&max_restart);
 	printf(" Please input max iteration times max_iter = ");
 	scanf("%d",&max_iter);
-	printf("\n N = %d , max_iter = %d \n \n", N, max_iter);
+	printf("\n N = %d , max_restart = %d , max_iter = %d \n \n", N, max_restart, max_iter);
 
 	double *A, *D, *x, *b, *u, tol;
 	A = (double *) malloc(N*N*sizeof(double));
@@ -268,23 +271,26 @@ void backsolve(double *H, double *s, double *y, int N, int max_iter, int i)
 
 void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 {
-	double temp;
-	if (dy == 0.0) 
+	#pragma acc kernels present(cs, sn)
 	{
-		cs[i] = 1.0;
-		sn[i] = 0.0;
-	} 
-	else if (fabs(dy) > fabs(dx)) 
-	{
-		temp = dx / dy;
-		sn[i] = 1.0 / sqrt( 1.0 + temp*temp );
-		cs[i] = temp * sn[i];
-	} 
-	else 
-	{
-		temp = dy / dx;
-		cs[i] = 1.0 / sqrt( 1.0 + temp*temp );
-		sn[i] = temp * cs[i];
+		double temp;
+		if (dy == 0.0) 
+		{
+			cs[i] = 1.0;
+			sn[i] = 0.0;
+		} 
+		else if (fabs(dy) > fabs(dx)) 
+		{
+			temp = dx / dy;
+			sn[i] = 1.0 / sqrt( 1.0 + temp*temp );
+			cs[i] = temp * sn[i];
+		} 
+		else 
+		{
+			temp = dy / dx;
+			cs[i] = 1.0 / sqrt( 1.0 + temp*temp );
+			sn[i] = temp * cs[i];
+		}
 	}
 }
 
@@ -340,14 +346,14 @@ void expand_idata(double *data2, double *data3, int Nx, int Ny, int Lx)
 	} 
 } 
 
-extern "C" void cuda_fft(double *d_data, int Lx, int Ny, void *stream) 
-{ 
-	cufftHandle plan; 
-	cufftPlan1d(&plan, Lx, CUFFT_Z2Z, Ny); 
-	cufftSetStream(plan, (cudaStream_t)stream); 
+extern "C" void cuda_fft(double *d_data, int Lx, int Ny, void *stream)
+{
+	cufftHandle plan;
+	cufftPlan1d(&plan, Lx, CUFFT_Z2Z, Ny);
+	cufftSetStream(plan, (cudaStream_t)stream);
 	cufftExecZ2Z(plan, (cufftDoubleComplex*)d_data, (cufftDoubleComplex*)d_data,CUFFT_FORWARD); 
-	cufftDestroy(plan); 
-} 
+	cufftDestroy(plan);
+}
 
 void fdst_gpu(double *data, double *data2, double *data3, int Nx, int Ny, int Lx) 
 {
@@ -429,7 +435,13 @@ void fastpoisson(double *b, double *x, int N)
 		fdst_gpu(x, data2, data3, Nx, Ny, Lx); 
 		transpose(x, temp, Nx, Ny); 
 		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
-		transpose(temp, x, Ny, Nx); 
+		transpose(temp, x, Ny, Nx);
+
+		free(data2);
+		free(data3);
+		free(temp);
+		free(temp_b);
+		free(lamda);
 	} // end data region 
 }
 
@@ -460,85 +472,115 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 
 	N2 = N*N;
 
-	#pragma acc data copyin(b[0:N2]) copyout(M_b[0:N2], r[0:N2])
+	#pragma acc data copyin(b[0:N2]) copyout(M_b[0:N2], r[0:N2], normb[0], beta[0])
 	{
 		fastpoisson(b, M_b, N);
 		norm_gpu(M_b, normb, N2);
 		#pragma acc parallel loop independent
 		for (k=0; k<N2; k++)	r[k] = M_b[k];
-	} // end pragma acc
+//		norm_gpu(r, beta, N2);
+	}
 
 	*beta = *normb;
+
+	if ((resid = *beta / *normb) <= tol)
+	{
+		tol = resid;
+		max_iter = 0;
+  	}
+
+
+	for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
 	for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
 	s[0] = *beta;
-	for (i=0; i<N2; i++)    Q[i] = r[i] / *beta;
 
 	for (i=0; i<max_iter; i++)
 	{
-  		q_subQ(q, Q, N2, i);
-		#pragma acc data copyin(D[0:N2], q[0:N2]) create(v[0:N2], M_temp[0:N2]) copyout(w[0:N2])
+		#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2], y[0:max_iter+1]) copyout(x[0:N2])
 		{
-			cublas_gemm(N, v, D, q);
+	  		q_subQ_gpu(q, Q, N2, i);
+	  		cublas_gemm(N, v, D, q);
 			fastpoisson(v, M_temp, N);
-			#pragma acc parallel loop independent
-  			for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
-		} //end pragma acc
 
-		// h(k,i) = qk*w
-  		for (k=0; k<=i; k++)
-		{
-			for (j=0; j<N2; j++)
+			#pragma acc parallel loop independent present(w, q, M_temp)
+	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
+
+  			// h(k,i) = qk*w
+	  		for (k=0; k<=i; k++)
 			{
-				q[j] = Q[N2*k+j];
-  			}
-			H[max_iter*k+i] = inner_product(q, w, N2);
-		}
-
-		for (k=0; k<=i; k++)
-		{
-			for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
-		}
-
-		H[max_iter*(i+1)+i] = norm_cpu(w, N2);
-		subQ_v(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
-
-		for (k = 0; k < i; k++)
-		{
-			//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
-			temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
-			H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
-			H[max_iter*k+i] = temp;
-		}
-
-		GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
-
-		//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
-		H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
-		H[max_iter*(i+1)+i] = 0.0;
-
-		//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-		temp = cs[i]*s[i];
-		s[i+1] = -1.0*sn[i]*s[i];
-		s[i] = temp;
-		resid = fabs(s[i+1] / *beta);
-
-		if (resid < tol)
-		{
-			backsolve(H, s, y, N, max_iter, i);
-			for(j=0; j<N; j++)
-			{
-				for (l=0; l<N; l++)
+				#pragma acc parallel loop independent
+				for (j=0; j<N2; j++)
 				{
-					for(k=0; k<=i; k++)
+					q[j] = Q[N2*k+j];
+	  			}
+				dot_gpu(q, w, nrm_temp, N2);
+				H[max_iter*k+i] = *nrm_temp;
+			}
+
+			#pragma acc parallel loop seq
+			for (k=0; k<=i; k++)
+			{
+				#pragma acc loop independent
+				for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
+			}
+
+			norm_gpu(w, nrm_temp, N2);
+			H[max_iter*(i+1)+i] = *nrm_temp;
+			subQ_v_gpu(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
+
+			#pragma acc kernels
+			for (k = 0; k < i; k++)
+			{
+				//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+				temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
+				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
+				H[max_iter*k+i] = temp;
+			}
+
+			GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
+
+			#pragma acc kernels
+			{
+				//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+				H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
+				H[max_iter*(i+1)+i] = 0.0;
+
+				//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+				temp = cs[i]*s[i];
+				s[i+1] = -1.0*sn[i]*s[i];
+				s[i] = temp;
+				resid = fabs(s[i+1] / *beta);
+			} //end kernels
+
+			if (resid < tol)
+			{
+				#pragma acc host_data use_device(H, y, s)
+				{
+					cublasHandle_t h;
+					cublasCreate(&h);
+					cublasDcopy(h, max_iter+1, s, 1, y, 1);
+					cublasDtrsv(h, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_NON_UNIT, i, H, max_iter, y, 1);
+					cublasDestroy(h);
+				}
+//				backsolve(H, s, y, N, max_iter, i);
+				#pragma acc parallel loop independent
+				for(j=0; j<N; j++)
+				{
+					#pragma acc loop independent
+					for (l=0; l<N; l++)
 					{
-						x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+						#pragma acc loop seq
+						for(k=0; k<=i; k++)
+						{
+							x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+						}
 					}
 				}
+				printf(" resid = %e \n", resid);
+				printf(" Converges at %d step. \n", i+1);
+				break;
 			}
-			printf(" resid = %e \n", resid);
-			printf(" Converges at %d step. \n", i+1);
-			break;
-		}
+		} //end pragma acc
 	}//end for
 }
 

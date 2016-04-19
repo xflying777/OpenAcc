@@ -28,10 +28,10 @@ void fixpoint_iteration(double *Beta, double *D, double *x, double *b, int N, do
 int main()
 {
 	printf("\n");
-	int N, p, q, r;
-	printf(" Input N = 2^p * 3^q * 5^r - 1, (p, q, r) =  ");
-	scanf("%d %d %d", &p, &q, &r);
-	N = pow(2, p) * pow(3, q) * pow(5, r) - 1;
+	int N, p, q, r, s;
+	printf(" Input N = 2^p * 3^q * 5^r * 7^s - 1, (p, q, r, s) =  ");
+	scanf("%d %d %d %d", &p, &q, &r, &s);
+	N = pow(2, p) * pow(3, q) * pow(5, r) * pow(7, s) - 1;
 	printf(" N = %d \n\n", N);
 
 	double *x, *b, *Beta, *D, *u;
@@ -91,7 +91,7 @@ void initial(double *x0, double *b, double *Beta, double *D, double *u, int N)
 	for (i=0; i<N; i++)
 	{
 		y = (i+1)*h;
-		for (j=0; j<N; j++)	
+		for (j=0; j<N; j++)
 		{
 			x = (j+1)*h;
 			// exact solution
@@ -104,7 +104,7 @@ void initial(double *x0, double *b, double *Beta, double *D, double *u, int N)
 			Beta[N*i+j] =  sin(y);
 		}
 	}
-	
+
 	for (i=0; i<N*N; i++)
 	{
 		// initial x
@@ -122,7 +122,7 @@ void initial(double *x0, double *b, double *Beta, double *D, double *u, int N)
 		D[N*i+(i+1)] = temp;
 	}
 }
-	
+
 //***********************************************************************************************************
 
 // b = alpha * A * x + beta * b;
@@ -281,7 +281,12 @@ void fastpoisson(double *b, double *x, int N)
 		transpose(x, temp, Nx, Ny); 
 		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
 		transpose(temp, x, Ny, Nx); 
-	} // end data region 
+	} // end data region
+	free(data2);
+	free(data3);
+	free(temp);
+	free(temp_b);
+	free(lamda);
 }
 
 //***********************************************************************************************************
@@ -318,6 +323,7 @@ void fixpoint_iteration(double *Beta, double *D, double *x, double *b, int N, do
 			if ( *error < tol)
 			{
 				printf(" Converges at %d step ! \n", i+1);
+				printf(" residual = %e \n", *error);
 				break;
 			}
 		}

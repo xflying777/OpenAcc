@@ -468,6 +468,10 @@ void fastpoisson(double *b, double *x, int N)
 		transpose(x, temp, Nx, Ny); 
 		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
 		transpose(temp, x, Ny, Nx); 
+		free(data2);
+		free(data3);
+		free(temp);
+		free(temp_b);
 	} // end data region 
 }
 
