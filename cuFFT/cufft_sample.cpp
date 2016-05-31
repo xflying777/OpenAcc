@@ -15,15 +15,16 @@ int main()
         printf("\n");
         printf(" Input N = 2^p * 3^q * 5^r - 1, (p, q, r) =  ");
         scanf("%d %d %d", &p, &q, &r);
-        N = pow(2, p) * pow(3, q) * pow(5, r) - 1;
+        N = pow(2, p) * pow(3, q) * pow(5, r);
         printf("\n N = %d \n \n", N);
 
-	double *x;
+	double *x, Gflop, times;
 	x = (double *) malloc(2*N*sizeof(double));
+	Gflop = 5*N*log2(1.0*N)*1.0e-9;
 
 	for (i=0; i<N; i++)
 	{
-		x[2*i] = sin(1.0*i);
+		x[2*i] = 1.0*i;
 		x[2*i+1] = 0.0;
 	}
 
@@ -37,10 +38,13 @@ int main()
 		}
 	}
 	t2 = clock();
+	times = 1.0*(t2-t1)/CLOCKS_PER_SEC;
 
-	print_fft(x, N);
-	printf(" Spend %f seconds. \n", 1.0*(t2-t1)/CLOCKS_PER_SEC);
+//	print_fft(x, N);	
+	printf(" Spend %f seconds. \n", times);
+	printf(" Computation speed is %f Gflops. \n", Gflop/times);
 
+	printf(" \n");
 	return 0;
 }
 
