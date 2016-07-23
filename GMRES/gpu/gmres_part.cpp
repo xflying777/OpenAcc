@@ -27,12 +27,15 @@
 #include "openacc.h"
 #include "cublas_v2.h"
 
+void print_vector(double *x, int N);
+void matrix_vector(double *A, double *x, double *b, int N);
+void print_matrixH(double *x, int N, int k);
 void initial_x(double *x, int N);
 void initial_A(double *A, int N);
 void initial_D(double *D, int N);
 void source(double *b, int N);
 void exact_solution(double *u, int N);
-void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, double tol);
+void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, int max_iter, double tol);
 double error(double *x, double *y, int N);
 
 int main()
@@ -63,7 +66,7 @@ int main()
 
 	tol = 1.0e-6;
 	t1 = clock();
-	gmres(A, D, x, b, N, max_iter, tol);
+	gmres(A, D, x, b, N, max_restart, max_iter, tol);
 	t2 = clock();
 	exact_solution(u, N);
 
@@ -86,6 +89,38 @@ double error(double *x, double *y, int N)
 		if(temp > error) error = temp;
 	}
 	return error;
+}
+
+void print_vector(double *x, int N)
+{
+	int i;
+	for(i=0; i<N; i++)
+	{
+		printf(" %f ", x[i]);
+	}
+	printf("\n");
+}
+
+void print_matrix(double *x, int N)
+{
+	int i, j;
+	for(i=0;i<N;i++)
+	{
+		for (j=0;j<N;j++) printf(" %f ", x[N*i+j]);
+		printf("\n");
+	}
+	printf("\n");
+}
+
+void print_matrixH(double *x, int max_iter, int k)
+{
+	int i, j;
+	for(i=0;i<=k;i++)
+	{
+		for (j=0;j<=k;j++) printf(" %f ", x[max_iter*i+j]);
+		printf("\n");
+	}
+	printf("\n");
 }
 
 void initial_x(double *x, int N)
@@ -271,26 +306,23 @@ void backsolve(double *H, double *s, double *y, int N, int max_iter, int i)
 
 void GeneratePlaneRotation(double dx, double dy, double *cs, double *sn, int i)
 {
-	#pragma acc kernels present(cs, sn)
+	double temp;
+	if (dy == 0.0) 
 	{
-		double temp;
-		if (dy == 0.0) 
-		{
-			cs[i] = 1.0;
-			sn[i] = 0.0;
-		} 
-		else if (fabs(dy) > fabs(dx)) 
-		{
-			temp = dx / dy;
-			sn[i] = 1.0 / sqrt( 1.0 + temp*temp );
-			cs[i] = temp * sn[i];
-		} 
-		else 
-		{
-			temp = dy / dx;
-			cs[i] = 1.0 / sqrt( 1.0 + temp*temp );
-			sn[i] = temp * cs[i];
-		}
+		cs[i] = 1.0;
+		sn[i] = 0.0;
+	} 
+	else if (fabs(dy) > fabs(dx)) 
+	{
+		temp = dx / dy;
+		sn[i] = 1.0 / sqrt( 1.0 + temp*temp );
+		cs[i] = temp * sn[i];
+	} 
+	else 
+	{
+		temp = dy / dx;
+		cs[i] = 1.0 / sqrt( 1.0 + temp*temp );
+		sn[i] = temp * cs[i];
 	}
 }
 
@@ -346,54 +378,54 @@ void expand_idata(double *data2, double *data3, int Nx, int Ny, int Lx)
 	} 
 } 
 
-extern "C" void cuda_fft(double *d_data, int Lx, int Ny, void *stream)
-{
-	cufftHandle plan;
-	cufftPlan1d(&plan, Lx, CUFFT_Z2Z, Ny);
-	cufftSetStream(plan, (cudaStream_t)stream);
+extern "C" void cuda_fft(double *d_data, int Lx, int Ny, void *stream) 
+{ 
+	cufftHandle plan; 
+	cufftPlan1d(&plan, Lx, CUFFT_Z2Z, Ny); 
+	cufftSetStream(plan, (cudaStream_t)stream); 
 	cufftExecZ2Z(plan, (cufftDoubleComplex*)d_data, (cufftDoubleComplex*)d_data,CUFFT_FORWARD); 
-	cufftDestroy(plan);
-}
+	cufftDestroy(plan); 
+} 
 
 void fdst_gpu(double *data, double *data2, double *data3, int Nx, int Ny, int Lx) 
-{
-	double s;
-	s = sqrt(2.0/(Nx+1));
-	#pragma acc data present(data3[0:2*Lx*Ny],data[0:Nx*Ny],data2[0:Lx*Ny])
-	{
-		expand_data(data, data2, Nx, Ny, Lx);
-		expand_idata(data2, data3, Nx, Ny, Lx);
+{ 
+	double s; 
+	s = sqrt(2.0/(Nx+1)); 
+	#pragma acc data present(data3[0:2*Lx*Ny],data[0:Nx*Ny],data2[0:Lx*Ny]) 
+	{ 
+		expand_data(data, data2, Nx, Ny, Lx); 
+		expand_idata(data2, data3, Nx, Ny, Lx); 
 
 		// Copy data to device at start of region and back to host and end of region 
-		// Inside this region the device data pointer will be used
-		#pragma acc host_data use_device(data3)
-		{
-			void *stream = acc_get_cuda_stream(acc_async_sync);
-			cuda_fft(data3, Lx, Ny, stream);
-		}
+		// Inside this region the device data pointer will be used 
+		#pragma acc host_data use_device(data3) 
+		{ 
+			void *stream = acc_get_cuda_stream(acc_async_sync); 
+			cuda_fft(data3, Lx, Ny, stream); 
+		} 
 
-		#pragma acc parallel loop independent
-		for (int i=0;i<Ny;i++)
-		{
-			#pragma acc loop independent
-			for (int j=0;j<Nx;j++)   data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2;
-		}
+		#pragma acc parallel loop independent 
+		for (int i=0;i<Ny;i++) 
+		{ 
+			#pragma acc loop independent 
+			for (int j=0;j<Nx;j++)   data[Nx*i+j] = -1.0*s*data3[2*Lx*i+2*j+3]/2; 
+		} 
 	}// end data region
-}
+} 
 
-void transpose(double *data_in, double *data_out, int Nx, int Ny)
-{
-	int i, j;
-	#pragma acc parallel loop independent present(data_in[0:Nx*Ny],data_out[0:Ny*Nx])
-	for(i=0;i<Ny;i++)
-	{
-		#pragma acc loop independent
-		for(j=0;j<Nx;j++)
-		{
-			data_out[i+j*Ny] = data_in[i*Nx+j];
-		}
-	}
-}
+void transpose(double *data_in, double *data_out, int Nx, int Ny) 
+{ 
+	int i, j; 
+	#pragma acc parallel loop independent present(data_in[0:Nx*Ny],data_out[0:Ny*Nx]) 
+	for(i=0;i<Ny;i++) 
+	{ 
+		#pragma acc loop independent 
+		for(j=0;j<Nx;j++) 
+		{ 
+			data_out[i+j*Ny] = data_in[i*Nx+j]; 
+		} 
+	} 
+} 
 
 void fastpoisson(double *b, double *x, int N) 
 { 
@@ -435,22 +467,20 @@ void fastpoisson(double *b, double *x, int N)
 		fdst_gpu(x, data2, data3, Nx, Ny, Lx); 
 		transpose(x, temp, Nx, Ny); 
 		fdst_gpu(temp, data2, data3, Nx, Ny, Lx); 
-		transpose(temp, x, Ny, Nx);
-
+		transpose(temp, x, Ny, Nx); 
 		free(data2);
 		free(data3);
 		free(temp);
 		free(temp_b);
-		free(lamda);
 	} // end data region 
 }
 
 //****************************************************************************
 
 
-void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, double tol)
+void gmres(double *A, double *D, double *x, double *b, int N, int max_restart, int max_iter, double tol)
 {
-	int i, j, k, l, N2;
+	int i, j, k, l, m, N2;
 	double resid, *normb, *beta, *nrm_temp, temp, *M_temp, *r, *q, *v, *M_b, *w, *cs, *sn, *s, *y, *Q, *H;
 
 	normb = (double *) malloc(1*sizeof(double));
@@ -478,91 +508,84 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 		norm_gpu(M_b, normb, N2);
 		#pragma acc parallel loop independent
 		for (k=0; k<N2; k++)	r[k] = M_b[k];
-//		norm_gpu(r, beta, N2);
+		norm_gpu(r, beta, N2);
 	}
 
-	*beta = *normb;
-
-	if ((resid = *beta / *normb) <= tol)
+	if ((resid = *beta / *normb) <= tol) 
 	{
 		tol = resid;
 		max_iter = 0;
   	}
 
-
-	for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
-	for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
-	s[0] = *beta;
-
-	for (i=0; i<max_iter; i++)
+	for (m=0; m<max_restart; m++)
 	{
-		#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2], y[0:max_iter+1]) copyout(x[0:N2])
+
+		for (i=0; i<N2; i++)	Q[i] = r[i] / *beta;
+		for (i=0; i<max_iter; i++)	s[i+1] = 0.0;
+		s[0] = *beta;
+
+		for (i=0; i<max_iter; i++)
 		{
-	  		q_subQ_gpu(q, Q, N2, i);
-	  		cublas_gemm(N, v, D, q);
-			fastpoisson(v, M_temp, N);
-
-			#pragma acc parallel loop independent present(w, q, M_temp)
-	  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
-
-  			// h(k,i) = qk*w
-	  		for (k=0; k<=i; k++)
+			#pragma acc data copyin(D[0:N2]) copy(Q[0:N2*(max_iter+1)], H[0:(N+1)*max_iter], cs[0:max_iter+1], sn[0:max_iter+1], s[0:max_iter+1]) create(q[0:N2], v[0:N2], M_temp[0:N2], w[0:N2], y[0:max_iter+1])
 			{
-				#pragma acc parallel loop independent
-				for (j=0; j<N2; j++)
+		  		q_subQ_gpu(q, Q, N2, i);
+		  		cublas_gemm(N, v, D, q);
+				fastpoisson(v, M_temp, N);
+
+				#pragma acc parallel loop independent present(w, q, M_temp)
+		  		for (k=0; k<N*N; k++)	w[k] = q[k] + M_temp[k];
+
+	  			// h(k,i) = qk*w
+		  		for (k=0; k<=i; k++)
 				{
-					q[j] = Q[N2*k+j];
-	  			}
-				dot_gpu(q, w, nrm_temp, N2);
-				H[max_iter*k+i] = *nrm_temp;
-			}
+					#pragma acc parallel loop independent
+					for (j=0; j<N2; j++)
+					{
+						q[j] = Q[N2*k+j];
+		  			}
+					dot_gpu(q, w, nrm_temp, N2);
+					H[max_iter*k+i] = *nrm_temp;
+				}
 
-			#pragma acc parallel loop seq
-			for (k=0; k<=i; k++)
-			{
-				#pragma acc loop independent
-				for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
-			}
+				#pragma acc parallel loop seq
+				for (k=0; k<=i; k++)
+				{
+					#pragma acc loop independent
+					for (j=0; j<N2; j++)	w[j] -= H[max_iter*k+i]*Q[N2*k+j];
+				}
 
-			norm_gpu(w, nrm_temp, N2);
-			H[max_iter*(i+1)+i] = *nrm_temp;
-			subQ_v_gpu(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
+				norm_gpu(w, nrm_temp, N2);
+				H[max_iter*(i+1)+i] = *nrm_temp;
+				subQ_v_gpu(Q, w, N2, i+1, H[max_iter*(i+1)+i]);
 
-			#pragma acc kernels
-			for (k = 0; k < i; k++)
-			{
-				//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
-				temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
-				H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
-				H[max_iter*k+i] = temp;
-			}
+				#pragma acc kernels
+				for (k = 0; k < i; k++)
+				{
+					//ApplyPlaneRotation(H(k,i), H(k+1,i), cs(k), sn(k))
+					temp = cs[k]*H[max_iter*k+i] + sn[k]*H[max_iter*(k+1)+i];
+					H[max_iter*(k+1)+i] = -1.0*sn[k]*H[max_iter*k+i] + cs[k]*H[max_iter*(k+1)+i];
+					H[max_iter*k+i] = temp;
+				} // end kernels
 
-			GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
+				GeneratePlaneRotation(H[max_iter*i+i], H[max_iter*(i+1)+i], cs, sn, i);
+				#pragma acc kernels
+				{
+					//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
+					H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
+					H[max_iter*(i+1)+i] = 0.0;
 
-			#pragma acc kernels
-			{
-				//ApplyPlaneRotation(H(i,i), H(i+1,i), cs(i), sn(i))
-				H[max_iter*i+i] = cs[i]*H[max_iter*i+i] + sn[i]*H[max_iter*(i+1)+i];
-				H[max_iter*(i+1)+i] = 0.0;
-
-				//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
-				temp = cs[i]*s[i];
-				s[i+1] = -1.0*sn[i]*s[i];
-				s[i] = temp;
-				resid = fabs(s[i+1] / *beta);
-			} //end kernels
+					//ApplyPlaneRotation(s(i), s(i+1), cs(i), sn(i));
+					temp = cs[i]*s[i];
+					s[i+1] = -1.0*sn[i]*s[i];
+					s[i] = temp;
+					resid = fabs(s[i+1] / *beta);
+				} // end kernels
+			} // end pragma data
 
 			if (resid < tol)
 			{
-				#pragma acc host_data use_device(H, y, s)
-				{
-					cublasHandle_t h;
-					cublasCreate(&h);
-					cublasDcopy(h, max_iter+1, s, 1, y, 1);
-					cublasDtrsv(h, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_NON_UNIT, i, H, max_iter, y, 1);
-					cublasDestroy(h);
-				}
-//				backsolve(H, s, y, N, max_iter, i);
+				backsolve(H, s, y, N, max_iter, i);
+				#pragma acc data copyin(Q[0:N2*(max_iter+1)], y[0:max_iter+1]) copy(x[0:N2])
 				#pragma acc parallel loop independent
 				for(j=0; j<N; j++)
 				{
@@ -576,12 +599,54 @@ void gmres(double *A, double *D, double *x, double *b, int N, int max_iter, doub
 						}
 					}
 				}
-				printf(" resid = %e \n", resid);
-				printf(" Converges at %d step. \n", i+1);
 				break;
 			}
-		} //end pragma acc
-	}//end for
+		}//end inside for
+
+		if (resid < tol)
+		{
+			printf(" resid = %e \n", resid);
+			printf(" Converges at %d cycle %d step. \n", m, i+1);
+			break;
+		}
+
+		// Caution : i = i + 1.
+		i = i - 1;
+		backsolve(H, s, y, N, max_iter, i);
+
+		#pragma acc data copyin(Q[0:N2*(max_iter+1)], y[0:max_iter+1]) copy(x[0:N2])
+		#pragma acc parallel loop independent
+		for(j=0; j<N; j++)
+		{
+			#pragma acc loop independent
+			for (l=0; l<N; l++)
+			{
+				#pragma acc loop seq
+				for(k=0; k<=i; k++)
+				{
+					x[N*j+l] += Q[N2*k+N*j+l]*y[k];
+				}
+			}
+		}
+
+		#pragma acc data copyin(D[0:N2], M_b[0:N2], x[0:N2]) create(v[0:N2], M_temp[0:N2]) copyout(r[0:N2])
+		{
+			cublas_gemm(N, v, D, x);
+			fastpoisson(v, M_temp, N);
+			#pragma acc parallel loop independent
+			for (j=0; j<N2; j++)	r[j] = M_b[j] - (x[j] + M_temp[j]);
+			norm_gpu(r, beta, N2);
+		}
+
+		s[i+1] = *beta;
+		resid = s[i+1] / *normb;
+		if ( resid < tol)
+		{
+			printf(" resid = %e \n", resid);
+			printf(" Converges at %d cycle %d step. \n", m, i);
+			break;
+		}
+	}//end outside for
 }
 
 
