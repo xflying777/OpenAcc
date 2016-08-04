@@ -38,12 +38,14 @@ int main()
 	#pragma acc data copyout(a[0:N*N], b[0:N], c1[0:N], c2[0:N])
 	initial(a, b, c1, c2, N);
 
+	t1 = clock();
 	#pragma acc data copyin(a[0:N*N], b[0:N]) copy(c1[0:N2])
 	{
-		t1 = clock();
+//		t1 = clock();
 		gemv_gpu(a, b, c1, N);
-		t2 = clock();
+//		t2 = clock();
 	}
+	t2 = clock();
 	time1 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
 
 	t1 = clock();

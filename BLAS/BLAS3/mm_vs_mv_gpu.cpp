@@ -1,7 +1,7 @@
 //*********************************************************
 //	Test: Matrix multiplication between dgemm and dgemv
-//		1.dgemm
-//		2.dgemv
+//		1.dgemm: cublasDgemm
+//		2.dgemv: cublasDgemv
 //	Matrix size: N x N
 //*********************************************************
 
@@ -39,7 +39,7 @@ int main()
 	initial(a, b, c1, c2, N2);
 //	printf(" initial done \n");
 
-	#pragma acc data copyin(a[0:N2], b[0:N2]) copyout(c1[0:N2])
+	#pragma acc data copyin(a[0:N2], b[0:N2]) copy(c1[0:N2])
 	{
 		t1 = clock();
 		dgemm(a, b, c1, N);
@@ -48,14 +48,14 @@ int main()
 	time1 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
 //	printf(" dgemm done \n");
 
-	#pragma acc data copyin(a[0:N2], b[0:N2]) copyout(c2[0:N2])
+	#pragma acc data copyin(a[0:N2], b[0:N2]) copy(c2[0:N2])
 	{
 		t1 = clock();
 		dgemv(a, b, c2, N);
 		t2 = clock();
 	} // end pragma data
 	time2 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
-	printf(" dgemv done \n");
+//	printf(" dgemv done \n");
 
 	printf(" dgemm spends %f seconds. (gpu) \n", time1);
 	printf(" dgemv spends %f seconds. (gpu) \n", time2);
@@ -109,7 +109,7 @@ void dgemm(double *a, double *b, double *c1, int N)
 			cublasCreate(&handle);
 			const double alpha = 1.0;
 			const double beta = 0.0;
-			cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, a, N, b, N, &beta, c1, N);
+			cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, b, N, a, N, &beta, c1, N);
 			cublasDestroy(handle);
 		}
 	} // end pragma data
@@ -126,8 +126,8 @@ void dgemv(double *a, double *b, double *c2, int N)
 	#pragma acc data present(a, b, c2) create(tempb[0:N], tempc[0:N])
 	{
 //		printf(" pragma acc data done \n");
-		cublasHandle_t handle;
-		cublasCreate(&handle);
+//		cublasHandle_t handle;
+//		cublasCreate(&handle);
 //		printf(" cublasCreate done \n");
 		const double alpha = 1.0;
 		const double beta = 0.0;
@@ -140,10 +140,12 @@ void dgemv(double *a, double *b, double *c2, int N)
 				tempc[j] = 0.0;
 			}
 //			if (i==0)	printf(" pragma acc parallel done at i = 0. \n");
-			#pragma acc host_data use_device(a, b, c2)
+			#pragma acc host_data use_device(a, b, tempb)
 			{
+				cublasHandle_t handle;
+				cublasCreate(&handle);
 				cublasDgemv(handle, CUBLAS_OP_T, N, N, &alpha, a, N, tempb, 1, &beta, tempc, 1);
-//			if (i == 0)	printf(" Dgemv done at i = 0. \n");
+				cublasDestroy(handle);
 			} // end pragma host_data
 			#pragma acc parallel loop independent
 			for (j=0; j<N; j++)
@@ -151,7 +153,7 @@ void dgemv(double *a, double *b, double *c2, int N)
 				c2[N*j+i] = tempc[j];
 			}
 		}
-		cublasDestroy(handle);
+//		cublasDestroy(handle);
 	} // end pragma data
 }
 
