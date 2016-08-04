@@ -37,6 +37,7 @@ int main()
 
 	#pragma acc data copyout(a[0:N2], b[0:N2], c1[0:N2], c2[0:N2])
 	initial(a, b, c1, c2, N2);
+//	printf(" initial done \n");
 
 	#pragma acc data copyin(a[0:N2], b[0:N2]) copyout(c1[0:N2])
 	{
@@ -45,6 +46,7 @@ int main()
 		t2 = clock();
 	} // end pragma data
 	time1 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
+//	printf(" dgemm done \n");
 
 	#pragma acc data copyin(a[0:N2], b[0:N2]) copyout(c2[0:N2])
 	{
@@ -53,6 +55,7 @@ int main()
 		t2 = clock();
 	} // end pragma data
 	time2 = 1.0*(t2 - t1)/CLOCKS_PER_SEC;
+	printf(" dgemv done \n");
 
 	printf(" dgemm spends %f seconds. (gpu) \n", time1);
 	printf(" dgemv spends %f seconds. (gpu) \n", time2);
@@ -104,7 +107,9 @@ void dgemm(double *a, double *b, double *c1, int N)
 		{
 			cublasHandle_t handle;
 			cublasCreate(&handle);
-			cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &1.0, a, N, b, N, &0.0, c1, N);
+			const double alpha = 1.0;
+			const double beta = 0.0;
+			cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, a, N, b, N, &beta, c1, N);
 			cublasDestroy(handle);
 		}
 	} // end pragma data
@@ -117,10 +122,15 @@ void dgemv(double *a, double *b, double *c2, int N)
 	tempb = (double *) malloc(N*sizeof(double));
 	tempc = (double *) malloc(N*sizeof(double));
 
+//	printf(" dgemv starts \n");
 	#pragma acc data present(a, b, c2) create(tempb[0:N], tempc[0:N])
 	{
+//		printf(" pragma acc data done \n");
 		cublasHandle_t handle;
 		cublasCreate(&handle);
+//		printf(" cublasCreate done \n");
+		const double alpha = 1.0;
+		const double beta = 0.0;
 		for (i=0; i<N; i++)
 		{
 			#pragma acc parallel loop independent
@@ -129,9 +139,11 @@ void dgemv(double *a, double *b, double *c2, int N)
 				tempb[j] = b[N*j+i];
 				tempc[j] = 0.0;
 			}
+//			if (i==0)	printf(" pragma acc parallel done at i = 0. \n");
 			#pragma acc host_data use_device(a, b, c2)
 			{
-				cublasDgemv(handle, CUBLAS_OP_N, N, N, &1.0, a, N, tempb, 1, &0.0, tempc, 1);
+				cublasDgemv(handle, CUBLAS_OP_T, N, N, &alpha, a, N, tempb, 1, &beta, tempc, 1);
+//			if (i == 0)	printf(" Dgemv done at i = 0. \n");
 			} // end pragma host_data
 			#pragma acc parallel loop independent
 			for (j=0; j<N; j++)
