@@ -1,6 +1,7 @@
 //****************************************
 // Test: Matrix-vector multiplication
-//	dgemv
+//	1. gemv by openacc
+//	2. dgemv by cblas
 //****************************************
 
 #include <stdio.h>
@@ -52,7 +53,7 @@ int main()
 
 	printf(" gemv_gpuoacc spends %f seconds. \n", time1);
 	printf(" gemv_cblas spends %f seconds. \n", time2);
-	printf(" gemv_cblas / gemv_gpu times = %f . \n", time1/time2);
+	printf(" gemv_cblas / gemv_gpu times = %f . \n", time2/time1);
 	printf(" error = %e \n", error(c1, c2, N));
 	printf(" \n");
 
